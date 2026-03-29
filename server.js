@@ -33,7 +33,7 @@ function buildMockCache() {
       id: '123456789',
       username: 'financeclub_leipzig',
       name: 'Finance Club Leipzig',
-      biography: 'Student-run finance club at Leipzig University 📈\nInvesting · Markets · Careers',
+      biography: 'Student-run finance club at Leipzig University\nInvesting - Markets - Careers',
       followers_count: 1284,
       media_count: 87,
       profile_picture_url: 'https://placehold.co/120x120/1a1a2e/ffffff?text=FCL',
@@ -47,39 +47,45 @@ function buildMockCache() {
     ],
     posts: [
       {
-        id: 'post_001', caption: '📊 Our recap of the latest ECB rate decision.', media_type: 'IMAGE',
+        id: 'post_001', caption: 'Our recap of the latest ECB rate decision.', media_type: 'IMAGE',
         timestamp: new Date(Date.now() - 1 * 86400000).toISOString(), permalink: 'https://www.instagram.com/',
         media_url: 'https://placehold.co/400x400/1a1a2e/ffffff?text=ECB+Recap',
+        local_image: null,
         insights: { impressions: 0, reach: 0, saved: 0, likes: 134, comments: 12, video_views: 0, engagement: 146 },
       },
       {
-        id: 'post_002', caption: '🎤 Event recap: our panel on sustainable investing.', media_type: 'IMAGE',
+        id: 'post_002', caption: 'Event recap: our panel on sustainable investing.', media_type: 'IMAGE',
         timestamp: new Date(Date.now() - 4 * 86400000).toISOString(), permalink: 'https://www.instagram.com/',
         media_url: 'https://placehold.co/400x400/16213e/ffffff?text=Event+Recap',
+        local_image: null,
         insights: { impressions: 0, reach: 0, saved: 0, likes: 287, comments: 34, video_views: 0, engagement: 321 },
       },
       {
-        id: 'post_003', caption: '📈 Week in markets: S&P hits new highs.', media_type: 'CAROUSEL_ALBUM',
+        id: 'post_003', caption: 'Week in markets: S&P hits new highs.', media_type: 'CAROUSEL_ALBUM',
         timestamp: new Date(Date.now() - 7 * 86400000).toISOString(), permalink: 'https://www.instagram.com/',
         media_url: 'https://placehold.co/400x400/0f3460/ffffff?text=Markets+Week',
+        local_image: null,
         insights: { impressions: 0, reach: 0, saved: 0, likes: 198, comments: 21, video_views: 0, engagement: 219 },
       },
       {
-        id: 'post_004', caption: '🎓 Welcoming our new semester members!', media_type: 'IMAGE',
+        id: 'post_004', caption: 'Welcoming our new semester members!', media_type: 'IMAGE',
         timestamp: new Date(Date.now() - 11 * 86400000).toISOString(), permalink: 'https://www.instagram.com/',
         media_url: 'https://placehold.co/400x400/533483/ffffff?text=New+Members',
+        local_image: null,
         insights: { impressions: 0, reach: 0, saved: 0, likes: 312, comments: 45, video_views: 0, engagement: 357 },
       },
       {
-        id: 'post_005', caption: '🎬 Reel: 60 seconds on how to read a P&L statement.', media_type: 'VIDEO',
+        id: 'post_005', caption: 'Reel: 60 seconds on how to read a P&L statement.', media_type: 'VIDEO',
         timestamp: new Date(Date.now() - 15 * 86400000).toISOString(), permalink: 'https://www.instagram.com/',
         media_url: 'https://placehold.co/400x400/e94560/ffffff?text=Reel',
+        local_image: null,
         insights: { impressions: 0, reach: 0, saved: 0, likes: 521, comments: 67, video_views: 4100, engagement: 588 },
       },
       {
-        id: 'post_006', caption: '📚 Book of the month: "The Intelligent Investor".', media_type: 'CAROUSEL_ALBUM',
+        id: 'post_006', caption: 'Book of the month: "The Intelligent Investor".', media_type: 'CAROUSEL_ALBUM',
         timestamp: new Date(Date.now() - 20 * 86400000).toISOString(), permalink: 'https://www.instagram.com/',
         media_url: 'https://placehold.co/400x400/1a1a2e/ffffff?text=Book+Club',
+        local_image: null,
         insights: { impressions: 0, reach: 0, saved: 0, likes: 167, comments: 18, video_views: 0, engagement: 185 },
       },
     ],
@@ -92,11 +98,13 @@ function buildMockCache() {
 let cache = { account: null, insights: null, posts: null, lastFetch: null };
 
 const DATA_DIR     = path.join(__dirname, 'data');
+const IMAGES_DIR   = path.join(DATA_DIR, 'images');
 const HISTORY_FILE = path.join(DATA_DIR, 'history.json');
 const CACHE_FILE   = path.join(DATA_DIR, 'cache.json');
 
 function ensureDataDir() {
   if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+  if (!fs.existsSync(IMAGES_DIR)) fs.mkdirSync(IMAGES_DIR, { recursive: true });
 }
 
 function loadHistory() {
@@ -140,12 +148,48 @@ function appendSnapshot(followersCount, engagementRate) {
   return history;
 }
 
-// Check if we already fetched today
 function fetchedToday() {
   if (!cache.lastFetch) return false;
   const lastDate = new Date(cache.lastFetch).toISOString().slice(0, 10);
   const today    = new Date().toISOString().slice(0, 10);
   return lastDate === today;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// IMAGE DOWNLOADER
+// Downloads post images locally so they don't expire or get blocked by CORS.
+// ─────────────────────────────────────────────────────────────────────────────
+async function downloadImage(url, filename) {
+  try {
+    const resp = await axios.get(url, { responseType: 'arraybuffer', timeout: 15000 });
+    const ext = (resp.headers['content-type'] || '').includes('png') ? '.png' : '.jpg';
+    const filepath = path.join(IMAGES_DIR, filename + ext);
+    fs.writeFileSync(filepath, resp.data);
+    return '/data/images/' + filename + ext;
+  } catch (err) {
+    console.error(`[Image] Failed to download ${filename}:`, err.message);
+    return null;
+  }
+}
+
+async function downloadPostImages(posts) {
+  ensureDataDir();
+  const results = [];
+  for (const p of posts) {
+    const url = p._originalImageUrl;
+    if (url) {
+      const localPath = await downloadImage(url, p.id);
+      results.push({ ...p, local_image: localPath });
+    } else {
+      results.push({ ...p, local_image: null });
+    }
+  }
+  return results;
+}
+
+async function downloadProfilePic(url, username) {
+  if (!url) return null;
+  return downloadImage(url, 'profile_' + username);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -177,17 +221,14 @@ app.post('/login', async (req, res) => {
 });
 
 app.post('/logout', (req, res) => { req.session.destroy(); res.redirect('/login'); });
+
+// Serve downloaded images (behind auth)
+app.use('/data/images', requireAuth, express.static(IMAGES_DIR));
+
 app.use(requireAuth, express.static(path.join(__dirname, 'public')));
 
 // ─────────────────────────────────────────────────────────────────────────────
 // APIFY — Instagram Profile Scraper
-// Actor: apify/instagram-profile-scraper
-// Docs:  https://apify.com/apify/instagram-profile-scraper
-//
-// We call the "run-sync-get-dataset-items" endpoint which:
-//   1. Starts the actor
-//   2. Waits for it to finish (~30-60s)
-//   3. Returns the results directly
 // ─────────────────────────────────────────────────────────────────────────────
 async function fetchFromApify() {
   console.log(`[Apify] Scraping @${IG_USERNAME}...`);
@@ -199,7 +240,7 @@ async function fetchFromApify() {
   }, {
     params: { token: APIFY_TOKEN },
     headers: { 'Content-Type': 'application/json' },
-    timeout: 120000, // 2 min timeout — actor can take a while
+    timeout: 120000,
   });
 
   if (!data || data.length === 0) {
@@ -207,6 +248,10 @@ async function fetchFromApify() {
   }
 
   const profile = data[0];
+
+  // ── Download profile picture ──
+  const originalPicUrl = profile.profilePicUrlHD || profile.profilePicUrl || '';
+  const localPicUrl = await downloadProfilePic(originalPicUrl, profile.username || IG_USERNAME);
 
   // ── Build account object ──
   const account = {
@@ -217,7 +262,7 @@ async function fetchFromApify() {
     followers_count: profile.followersCount ?? profile.subscribersCount ?? 0,
     following_count: profile.followsCount ?? profile.followingCount ?? 0,
     media_count: profile.postsCount ?? profile.mediaCount ?? 0,
-    profile_picture_url: profile.profilePicUrl || profile.profilePicUrlHD || '',
+    profile_picture_url: localPicUrl || originalPicUrl,
     website: profile.externalUrl || profile.website || '',
     is_verified: profile.verified ?? profile.isVerified ?? false,
     is_private: profile.private ?? profile.isPrivate ?? false,
@@ -225,7 +270,7 @@ async function fetchFromApify() {
 
   // ── Build posts array ──
   const rawPosts = profile.latestPosts || profile.posts || [];
-  const posts = rawPosts.slice(0, 12).map(p => {
+  let posts = rawPosts.slice(0, 12).map(p => {
     const likes    = p.likesCount ?? p.likes ?? 0;
     const comments = p.commentsCount ?? p.comments ?? 0;
     const videoViews = p.videoViewCount ?? p.videoPlayCount ?? p.video_views ?? 0;
@@ -234,16 +279,33 @@ async function fetchFromApify() {
     if (p.type === 'Video' || p.isVideo || p.videoUrl) media_type = 'VIDEO';
     else if (p.type === 'Sidecar' || p.childPosts?.length) media_type = 'CAROUSEL_ALBUM';
 
+    // For carousels/sidecars: pick the first image
+    let imageUrl = p.displayUrl || p.imageUrl || '';
+    if (!imageUrl && p.images && p.images.length > 0) {
+      imageUrl = p.images[0];
+    }
+    if (!imageUrl && p.childPosts && p.childPosts.length > 0) {
+      imageUrl = p.childPosts[0].displayUrl || p.childPosts[0].imageUrl || '';
+    }
+    // For video posts use the thumbnail
+    if (media_type === 'VIDEO' && !imageUrl) {
+      imageUrl = p.previewUrl || p.thumbnailUrl || p.videoThumbnailUrl || '';
+    }
+
     return {
       id: p.shortCode || p.id || '',
       caption: (p.caption || '').slice(0, 500),
       media_type,
-      timestamp: p.timestamp || p.takenAtTimestamp
-        ? new Date((p.takenAtTimestamp || 0) * 1000).toISOString()
-        : p.timestamp || '',
+      timestamp: p.timestamp
+        ? p.timestamp
+        : p.takenAtTimestamp
+          ? new Date(p.takenAtTimestamp * 1000).toISOString()
+          : '',
       permalink: p.url || (p.shortCode ? `https://www.instagram.com/p/${p.shortCode}/` : ''),
-      media_url: p.displayUrl || p.imageUrl || p.videoUrl || '',
-      thumbnail_url: p.displayUrl || p.imageUrl || '',
+      _originalImageUrl: imageUrl,
+      media_url: '',
+      thumbnail_url: '',
+      local_image: null,
       insights: {
         impressions: 0,
         reach: 0,
@@ -255,6 +317,13 @@ async function fetchFromApify() {
       },
     };
   });
+
+  // ── Download all post images locally ──
+  console.log(`[Apify] Downloading ${posts.length} post images...`);
+  posts = await downloadPostImages(posts);
+
+  // Clean up temporary field
+  posts = posts.map(({ _originalImageUrl, ...rest }) => rest);
 
   // ── Calculate engagement ──
   const totalLikes    = posts.reduce((s, p) => s + p.insights.likes, 0);
@@ -317,18 +386,12 @@ async function refreshCache() {
 // ─────────────────────────────────────────────────────────────────────────────
 // API ROUTES
 // ─────────────────────────────────────────────────────────────────────────────
-
-// Return cached KPIs (never triggers a scrape — instant response)
 app.get('/api/kpis', requireAuth, async (req, res) => {
-  // If no cache in memory, try loading from disk first
   if (!cache.lastFetch) loadCacheFromDisk();
-  // If still nothing, do an initial fetch
   if (!cache.lastFetch) await refreshCache();
   res.json(cache);
 });
 
-// Manual refresh — button click from the dashboard
-// Only allows one scrape per calendar day to save Apify credits
 app.post('/api/refresh', requireAuth, async (req, res) => {
   if (MOCK) {
     cache = buildMockCache();
@@ -347,7 +410,6 @@ app.post('/api/refresh', requireAuth, async (req, res) => {
   res.json({ ok: true, lastFetch: cache.lastFetch });
 });
 
-// History endpoint for long-term trend charts
 app.get('/api/history', requireAuth, (req, res) => {
   res.json(loadHistory());
 });
@@ -357,15 +419,14 @@ app.get('/api/history', requireAuth, (req, res) => {
 // ─────────────────────────────────────────────────────────────────────────────
 app.listen(PORT, async () => {
   console.log(`Finance Club Dashboard running on http://localhost:${PORT}`);
+  ensureDataDir();
 
-  // Try to load last cache from disk so the dashboard works instantly
   loadCacheFromDisk();
 
   if (MOCK) {
     console.log('[MOCK] Password:', process.env.DASHBOARD_PASSWORD || 'ChangeMe123!');
     if (!cache.lastFetch) cache = buildMockCache();
   } else if (!cache.lastFetch) {
-    // First ever run — fetch once
     console.log('[Startup] No cached data found — running initial Apify scrape...');
     await refreshCache();
   }
