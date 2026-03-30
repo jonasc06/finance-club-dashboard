@@ -797,14 +797,13 @@ app.post('/api/linkedin/refresh', requireAuth, async (req, res) => {
     liCache = buildLiMockCache();
     return res.json({ ok: true, lastFetch: liCache.lastFetch });
   }
-  /*if (liFetchedToday()) {
+  if (liFetchedToday()) {
     return res.status(429).json({
       ok: false,
       error: 'Already fetched LinkedIn today. Next refresh available tomorrow.',
       lastFetch: liCache.lastFetch,
     });
   }
-    */
   await refreshLiCache();
   res.json({ ok: true, lastFetch: liCache.lastFetch });
 });
