@@ -12,7 +12,7 @@ const MOCK = process.env.MOCK_DATA === 'true';
 
 const APIFY_TOKEN = process.env.APIFY_TOKEN || '';
 const IG_USERNAME = process.env.INSTAGRAM_USERNAME || 'finance.club.leipzig';
-const LI_COMPANY_URL = process.env.LINKEDIN_COMPANY_URL || 'https://www.linkedin.com/company/finance-club-leipzig';
+const LI_COMPANY_URL = process.env.LINKEDIN_COMPANY_URL;
 
 if (MOCK) console.log('[MOCK] Running in mock-data mode.');
 else console.log(`[Config] APIFY  IG_USERNAME=${IG_USERNAME}  LI_COMPANY=${LI_COMPANY_URL}`);
@@ -555,52 +555,64 @@ async function fetchIgFromApify() {
 // APIFY — LinkedIn Scrapers
 // ─────────────────────────────────────────────────────────────────────────────
 async function fetchLiFromApify() {
-  console.log(`[Apify/LI] Scraping company: ${LI_COMPANY_URL}...`);
+  const companyUrl = decodeURIComponent(LI_COMPANY_URL);
+  console.log(`[Apify/LI] Scraping company: ${companyUrl}...`);
 
-  // ── Step 1: Fetch company profile via dev_fusion/linkedin-company-scraper ──
+  // ── Step 1: Fetch company profile ──
   console.log('[Apify/LI] Step 1 — Fetching company profile...');
-  const profileUrl = 'https://api.apify.com/v2/acts/dev_fusion~linkedin-company-scraper/run-sync-get-dataset-items';
+  const profileEndpoint = 'https://api.apify.com/v2/acts/dev_fusion~linkedin-company-scraper/run-sync-get-dataset-items';
 
-  const { data: profileData } = await axios.post(profileUrl, {
-    urls: [LI_COMPANY_URL],
+  const { data: profileData } = await axios.post(profileEndpoint, {
+    profileUrls: [companyUrl],   // ← was: urls
   }, {
     params: { token: APIFY_TOKEN },
     headers: { 'Content-Type': 'application/json' },
     timeout: 120000,
   });
+
+  console.log(`[Apify/LI] Profile items received: ${profileData?.length || 0}`);
+  if (profileData?.[0]) console.log('[Apify/LI] Profile keys:', Object.keys(profileData[0]).join(', '));
 
   const company = (profileData && profileData.length > 0) ? profileData[0] : {};
 
   // Download logo locally
-  const originalLogoUrl = company.logoUrl || company.logo || '';
+  const originalLogoUrl = company.logoResolutionResult || company.logoUrl || company.logo || '';
   const localLogoUrl = await downloadProfilePic(originalLogoUrl, 'li_logo', 'li');
 
   const account = {
-    name: company.name || '',
+    name: company.companyName || company.name || '',
     description: company.description || '',
     tagline: company.tagline || '',
-    followers_count: company.followerCount ?? company.followersCount ?? 0,
-    employee_count: company.employeeCount ?? company.staffCount ?? 0,
+    followers_count: company.followerCount ?? 0,
+    employee_count: company.employeeCount ?? 0,
     logo_url: localLogoUrl || originalLogoUrl,
-    cover_url: company.coverImageUrl || '',
-    website: company.websiteUrl || company.website || '',
-    linkedin_url: company.url || LI_COMPANY_URL,
+    cover_url: company.croppedCoverImage || company.originalCoverImage || '',
+    website: company.websiteUrl || '',
+    linkedin_url: company.url || companyUrl,
   };
 
-  // ── Step 2: Fetch company posts via harvestapi/linkedin-profile-posts ──
-  console.log('[Apify/LI] Step 2 — Fetching company posts...');
-  const postsUrl = 'https://api.apify.com/v2/acts/harvestapi~linkedin-profile-posts/run-sync-get-dataset-items';
 
-  const { data: postsData } = await axios.post(postsUrl, {
-    targetUrls: [LI_COMPANY_URL],
-    maxPosts: 12,
+  // ── Step 2: Fetch company posts ──
+  console.log('[Apify/LI] Step 2 — Fetching company posts...');
+  const postsEndpoint = 'https://api.apify.com/v2/acts/harvestapi~linkedin-company-posts/run-sync-get-dataset-items';
+
+  // ── Step 2: Fetch company posts ──
+  const { data: postsData } = await axios.post(postsEndpoint, {
+    targetUrls: [companyUrl],    // ← THIS is the correct field name
   }, {
     params: { token: APIFY_TOKEN },
     headers: { 'Content-Type': 'application/json' },
     timeout: 120000,
   });
+  
+  console.log('[Apify/LI] Raw posts response (first 500 chars):', JSON.stringify(postsData).slice(0, 500));
+
+
+  console.log(`[Apify/LI] Post items received: ${postsData?.length || 0}`);
+  if (postsData?.[0]) console.log('[Apify/LI] First post keys:', Object.keys(postsData[0]).join(', '));
 
   const rawPosts = (postsData || []).filter(p => p.type === 'post');
+  console.log(`[Apify/LI] Posts after type=post filter: ${rawPosts.length}`);
 
   let posts = rawPosts.slice(0, 12).map(p => {
     const eng = p.engagement || {};
@@ -615,18 +627,17 @@ async function fetchLiFromApify() {
         reactionBreakdown[r.type] = r.count || 0;
       }
     });
+    const totalReactionsForPost = Object.values(reactionBreakdown).reduce((a, b) => a + b, 0);
 
     // Determine media type
     let media_type = 'TEXT';
     if (p.postImages && p.postImages.length > 0) media_type = 'IMAGE';
     if (p.document) media_type = 'DOCUMENT';
-    // If video content detected (future-proof)
     if (p.video) media_type = 'VIDEO';
 
     // Pick best image
     let imageUrl = '';
     if (p.postImages && p.postImages.length > 0) {
-      // postImages can be array of objects with url, or array of strings
       const firstImg = p.postImages[0];
       imageUrl = typeof firstImg === 'string' ? firstImg : (firstImg.url || firstImg.imageUrl || '');
     }
@@ -637,9 +648,16 @@ async function fetchLiFromApify() {
       }
     }
 
-    const timestamp = p.postedAt
-      ? (p.postedAt.date || new Date(p.postedAt.timestamp).toISOString())
-      : '';
+    // Timestamp — handle string, object, or epoch
+    let timestamp = '';
+    if (p.postedAt) {
+      if (typeof p.postedAt === 'string') {
+        timestamp = p.postedAt;
+      } else {
+        timestamp = p.postedAt.date || (p.postedAt.timestamp ? new Date(p.postedAt.timestamp).toISOString() : '');
+      }
+    }
+    if (!timestamp) timestamp = p.postedDate || p.publishedAt || '';
 
     return {
       id: p.id || '',
@@ -650,10 +668,10 @@ async function fetchLiFromApify() {
       _originalImageUrl: imageUrl,
       local_image: null,
       insights: {
-        reactions: likes,
+        reactions: totalReactionsForPost || likes,
         comments,
         shares,
-        engagement: likes + comments + shares,
+        engagement: (totalReactionsForPost || likes) + comments + shares,
         reaction_breakdown: reactionBreakdown,
       },
     };
@@ -701,6 +719,7 @@ async function fetchLiFromApify() {
     source: 'apify',
   };
 }
+
 
 // ─────────────────────────────────────────────────────────────────────────────
 // CACHE REFRESH
@@ -778,13 +797,14 @@ app.post('/api/linkedin/refresh', requireAuth, async (req, res) => {
     liCache = buildLiMockCache();
     return res.json({ ok: true, lastFetch: liCache.lastFetch });
   }
-  if (liFetchedToday()) {
+  /*if (liFetchedToday()) {
     return res.status(429).json({
       ok: false,
       error: 'Already fetched LinkedIn today. Next refresh available tomorrow.',
       lastFetch: liCache.lastFetch,
     });
   }
+    */
   await refreshLiCache();
   res.json({ ok: true, lastFetch: liCache.lastFetch });
 });
