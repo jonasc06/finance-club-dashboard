@@ -8,183 +8,13 @@ const fs      = require('fs');
 
 const app  = express();
 const PORT = process.env.PORT || 1000;
-const MOCK = process.env.MOCK_DATA === 'true';
 
 const APIFY_TOKEN = process.env.APIFY_TOKEN || '';
 const IG_USERNAME = process.env.INSTAGRAM_USERNAME || 'finance.club.leipzig';
 const LI_COMPANY_URL = process.env.LINKEDIN_COMPANY_URL;
 
-if (MOCK) console.log('[MOCK] Running in mock-data mode.');
-else console.log(`[Config] APIFY  IG_USERNAME=${IG_USERNAME}  LI_COMPANY=${LI_COMPANY_URL}`);
+console.log(`[Config] APIFY  IG_USERNAME=${IG_USERNAME}  LI_COMPANY=${LI_COMPANY_URL}`);
 
-// ─────────────────────────────────────────────────────────────────────────────
-// MOCK DATA — Instagram
-// ─────────────────────────────────────────────────────────────────────────────
-function buildMockCache() {
-  const days = 30;
-  const makeTimeseries = (base, variance) =>
-    Array.from({ length: days }, (_, i) => ({
-      value: Math.floor(base + Math.sin(i / 3) * variance + Math.random() * (variance / 2)),
-      end_time: new Date(Date.now() - (days - 1 - i) * 86400000).toISOString(),
-    }));
-
-  return {
-    lastFetch: new Date().toISOString(),
-    account: {
-      id: '123456789',
-      username: 'financeclub_leipzig',
-      name: 'Finance Club Leipzig',
-      biography: 'Student-run finance club at Leipzig University\nInvesting - Markets - Careers',
-      followers_count: 1284,
-      media_count: 87,
-      profile_picture_url: 'https://placehold.co/120x120/1a1a2e/ffffff?text=FCL',
-      website: 'https://financeclub-leipzig.de',
-    },
-    insights: [
-      { name: 'impressions',    period: 'day', title: 'Impressions',    values: makeTimeseries(1100, 400) },
-      { name: 'reach',          period: 'day', title: 'Reach',          values: makeTimeseries(700,  250) },
-      { name: 'profile_views',  period: 'day', title: 'Profile Views',  values: makeTimeseries(60,   30)  },
-      { name: 'follower_count', period: 'day', title: 'Follower Count', values: makeTimeseries(1250, 15)  },
-    ],
-    posts: [
-      {
-        id: 'post_001', caption: 'Our recap of the latest ECB rate decision.', media_type: 'IMAGE',
-        timestamp: new Date(Date.now() - 1 * 86400000).toISOString(), permalink: 'https://www.instagram.com/',
-        media_url: 'https://placehold.co/400x400/1a1a2e/ffffff?text=ECB+Recap',
-        local_image: null,
-        insights: { impressions: 0, reach: 0, saved: 0, likes: 134, comments: 12, video_views: 0, engagement: 146 },
-      },
-      {
-        id: 'post_002', caption: 'Event recap: our panel on sustainable investing.', media_type: 'IMAGE',
-        timestamp: new Date(Date.now() - 4 * 86400000).toISOString(), permalink: 'https://www.instagram.com/',
-        media_url: 'https://placehold.co/400x400/16213e/ffffff?text=Event+Recap',
-        local_image: null,
-        insights: { impressions: 0, reach: 0, saved: 0, likes: 287, comments: 34, video_views: 0, engagement: 321 },
-      },
-      {
-        id: 'post_003', caption: 'Week in markets: S&P hits new highs.', media_type: 'CAROUSEL_ALBUM',
-        timestamp: new Date(Date.now() - 7 * 86400000).toISOString(), permalink: 'https://www.instagram.com/',
-        media_url: 'https://placehold.co/400x400/0f3460/ffffff?text=Markets+Week',
-        local_image: null,
-        insights: { impressions: 0, reach: 0, saved: 0, likes: 198, comments: 21, video_views: 0, engagement: 219 },
-      },
-      {
-        id: 'post_004', caption: 'Welcoming our new semester members!', media_type: 'IMAGE',
-        timestamp: new Date(Date.now() - 11 * 86400000).toISOString(), permalink: 'https://www.instagram.com/',
-        media_url: 'https://placehold.co/400x400/533483/ffffff?text=New+Members',
-        local_image: null,
-        insights: { impressions: 0, reach: 0, saved: 0, likes: 312, comments: 45, video_views: 0, engagement: 357 },
-      },
-      {
-        id: 'post_005', caption: 'Reel: 60 seconds on how to read a P&L statement.', media_type: 'VIDEO',
-        timestamp: new Date(Date.now() - 15 * 86400000).toISOString(), permalink: 'https://www.instagram.com/',
-        media_url: 'https://placehold.co/400x400/e94560/ffffff?text=Reel',
-        local_image: null,
-        insights: { impressions: 0, reach: 0, saved: 0, likes: 521, comments: 67, video_views: 4100, engagement: 588 },
-      },
-      {
-        id: 'post_006', caption: 'Book of the month: "The Intelligent Investor".', media_type: 'CAROUSEL_ALBUM',
-        timestamp: new Date(Date.now() - 20 * 86400000).toISOString(), permalink: 'https://www.instagram.com/',
-        media_url: 'https://placehold.co/400x400/1a1a2e/ffffff?text=Book+Club',
-        local_image: null,
-        insights: { impressions: 0, reach: 0, saved: 0, likes: 167, comments: 18, video_views: 0, engagement: 185 },
-      },
-    ],
-  };
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// MOCK DATA — LinkedIn
-// ─────────────────────────────────────────────────────────────────────────────
-function buildLiMockCache() {
-  const days = 30;
-  const makeTimeseries = (base, variance) =>
-    Array.from({ length: days }, (_, i) => ({
-      value: Math.floor(base + Math.sin(i / 4) * variance + Math.random() * (variance / 2)),
-      end_time: new Date(Date.now() - (days - 1 - i) * 86400000).toISOString(),
-    }));
-
-  return {
-    lastFetch: new Date().toISOString(),
-    account: {
-      name: 'Finance Club Leipzig',
-      description: 'Student-run finance club at Leipzig University. We connect students with the world of finance through events, workshops, and networking.',
-      tagline: 'Bridging Academia and Finance',
-      followers_count: 342,
-      employee_count: 15,
-      logo_url: 'https://placehold.co/120x120/0077b5/ffffff?text=FCL',
-      cover_url: '',
-      website: 'https://financeclub-leipzig.de',
-      linkedin_url: 'https://www.linkedin.com/company/finance-club-leipzig',
-    },
-    insights: [
-      { name: 'follower_count', period: 'day', title: 'Follower Count', values: makeTimeseries(320, 10) },
-      { name: 'engagement_rate', period: 'day', title: 'Engagement Rate (%)', values: makeTimeseries(5.2, 1.5) },
-    ],
-    posts: [
-      {
-        id: 'li_post_001',
-        text: 'Excited to announce our partnership with Deutsche Börse for next semester\'s trading competition! 🏆📈',
-        media_type: 'IMAGE',
-        timestamp: new Date(Date.now() - 2 * 86400000).toISOString(),
-        permalink: 'https://www.linkedin.com/',
-        local_image: 'https://placehold.co/400x300/0077b5/ffffff?text=Trading+Comp',
-        insights: {
-          reactions: 89, comments: 14, shares: 23, engagement: 126,
-          reaction_breakdown: { LIKE: 62, APPRECIATION: 12, PRAISE: 8, EMPATHY: 4, INTEREST: 3, ENTERTAINMENT: 0 },
-        },
-      },
-      {
-        id: 'li_post_002',
-        text: 'Our latest workshop on DCF valuation attracted over 60 participants! Thank you to everyone who joined. 📊',
-        media_type: 'IMAGE',
-        timestamp: new Date(Date.now() - 5 * 86400000).toISOString(),
-        permalink: 'https://www.linkedin.com/',
-        local_image: 'https://placehold.co/400x300/16213e/ffffff?text=DCF+Workshop',
-        insights: {
-          reactions: 145, comments: 28, shares: 31, engagement: 204,
-          reaction_breakdown: { LIKE: 98, APPRECIATION: 22, PRAISE: 14, EMPATHY: 6, INTEREST: 5, ENTERTAINMENT: 0 },
-        },
-      },
-      {
-        id: 'li_post_003',
-        text: 'Market outlook Q2 2026: Our research team shares their analysis on European equities and fixed income trends.',
-        media_type: 'DOCUMENT',
-        timestamp: new Date(Date.now() - 9 * 86400000).toISOString(),
-        permalink: 'https://www.linkedin.com/',
-        local_image: 'https://placehold.co/400x300/0f3460/ffffff?text=Q2+Outlook',
-        insights: {
-          reactions: 201, comments: 42, shares: 55, engagement: 298,
-          reaction_breakdown: { LIKE: 130, APPRECIATION: 30, PRAISE: 18, EMPATHY: 8, INTEREST: 15, ENTERTAINMENT: 0 },
-        },
-      },
-      {
-        id: 'li_post_004',
-        text: 'We\'re hiring! Looking for a new Head of Marketing for the upcoming semester. Apply now! 🚀',
-        media_type: 'IMAGE',
-        timestamp: new Date(Date.now() - 14 * 86400000).toISOString(),
-        permalink: 'https://www.linkedin.com/',
-        local_image: 'https://placehold.co/400x300/533483/ffffff?text=Hiring',
-        insights: {
-          reactions: 178, comments: 35, shares: 67, engagement: 280,
-          reaction_breakdown: { LIKE: 120, APPRECIATION: 28, PRAISE: 15, EMPATHY: 5, INTEREST: 8, ENTERTAINMENT: 2 },
-        },
-      },
-      {
-        id: 'li_post_005',
-        text: 'Throwback to our networking event with alumni from Goldman Sachs, McKinsey and BCG. What an inspiring evening! 🤝',
-        media_type: 'IMAGE',
-        timestamp: new Date(Date.now() - 20 * 86400000).toISOString(),
-        permalink: 'https://www.linkedin.com/',
-        local_image: 'https://placehold.co/400x300/0077b5/ffffff?text=Networking',
-        insights: {
-          reactions: 312, comments: 56, shares: 48, engagement: 416,
-          reaction_breakdown: { LIKE: 210, APPRECIATION: 45, PRAISE: 30, EMPATHY: 12, INTEREST: 10, ENTERTAINMENT: 5 },
-        },
-      },
-    ],
-  };
-}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // CACHE + HISTORY — Shared Helpers
@@ -725,11 +555,6 @@ async function fetchLiFromApify() {
 // CACHE REFRESH
 // ─────────────────────────────────────────────────────────────────────────────
 async function refreshIgCache() {
-  if (MOCK) {
-    igCache = buildMockCache();
-    console.log('[MOCK/IG] Cache loaded at', igCache.lastFetch);
-    return;
-  }
   try {
     igCache = await fetchIgFromApify();
     saveIgCacheToDisk();
@@ -740,11 +565,6 @@ async function refreshIgCache() {
 }
 
 async function refreshLiCache() {
-  if (MOCK) {
-    liCache = buildLiMockCache();
-    console.log('[MOCK/LI] Cache loaded at', liCache.lastFetch);
-    return;
-  }
   try {
     liCache = await fetchLiFromApify();
     saveLiCacheToDisk();
@@ -764,10 +584,6 @@ app.get('/api/kpis', requireAuth, async (req, res) => {
 });
 
 app.post('/api/refresh', requireAuth, async (req, res) => {
-  if (MOCK) {
-    igCache = buildMockCache();
-    return res.json({ ok: true, lastFetch: igCache.lastFetch });
-  }
   if (igFetchedToday()) {
     return res.status(429).json({
       ok: false,
@@ -793,10 +609,6 @@ app.get('/api/linkedin/kpis', requireAuth, async (req, res) => {
 });
 
 app.post('/api/linkedin/refresh', requireAuth, async (req, res) => {
-  if (MOCK) {
-    liCache = buildLiMockCache();
-    return res.json({ ok: true, lastFetch: liCache.lastFetch });
-  }
   if (liFetchedToday()) {
     return res.status(429).json({
       ok: false,
@@ -844,18 +656,14 @@ app.listen(PORT, async () => {
   loadIgCacheFromDisk();
   loadLiCacheFromDisk();
 
-  if (MOCK) {
-    console.log('[MOCK] Password:', process.env.DASHBOARD_PASSWORD || 'ChangeMe123!');
-    if (!igCache.lastFetch) igCache = buildMockCache();
-    if (!liCache.lastFetch) liCache = buildLiMockCache();
-  } else {
-    if (!igCache.lastFetch) {
-      console.log('[Startup] No IG cache — running initial scrape...');
-      await refreshIgCache();
-    }
-    if (!liCache.lastFetch) {
-      console.log('[Startup] No LI cache — running initial scrape...');
-      await refreshLiCache();
-    }
+   
+  if (!igCache.lastFetch) {
+    console.log('[Startup] No IG cache — running initial scrape...');
+    await refreshIgCache();
   }
+  if (!liCache.lastFetch) {
+    console.log('[Startup] No LI cache — running initial scrape...');
+    await refreshLiCache();
+  }
+
 });
