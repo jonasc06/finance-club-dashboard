@@ -1,0 +1,37 @@
+# ── Git ──
+.git
+.gitignore
+
+# ── Dependencies (rebuilt on deploy) ──
+node_modules/
+
+# ── Environment (use Secret Manager instead) ──
+.env
+
+# ── Runtime data (must NOT be baked into image) ──
+data/
+sessions/
+
+# ── OS files ──
+.DS_Store
+Thumbs.db
+
+# ── Logs ──
+*.log
+
+# ── Python venvs ──
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# ── IDE ──
+.vscode/
+.idea/
+
+# ── Deployment meta ──
+.gcloudignore
+README.md
+LICENSE
+*.md
+

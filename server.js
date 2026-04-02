@@ -1,47 +1,63 @@
 const express = require('express');
 const path    = require('path');
-const config  = require('./config');
-const { sessionMiddleware, requireAuth } = require('./middleware/auth');
-const { ensureDataDir, migrateDataFiles } = require('./services/cache');
-const ig = require('./services/instagram');
-const li = require('./services/linkedin');
 
-const app = express();
+async function start() {
+  // ── Load secrets FIRST (before config is read) ──
+  const { loadAllSecrets } = require('./config/secrets');
+  await loadAllSecrets();
 
-console.log(`[Config] APIFY  IG_USERNAME=${config.IG_USERNAME}  LI_COMPANY=${config.LI_COMPANY_URL}`);
+  // ── Now config values will be populated ──
+  const config = require('./config');
+  const { sessionMiddleware, requireAuth } = require('./middleware/auth');
+  const { ensureDataDir, migrateDataFiles } = require('./services/cache');
+  const ig = require('./services/instagram');
+  const li = require('./services/linkedin');
 
-// ── Global middleware ──
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-app.use(sessionMiddleware());
+  const app = express();
 
-// ── Routes ──
-app.use(require('./routes/auth'));
-app.use(require('./routes/cron'));
-app.use(require('./routes/instagram'));
-app.use(require('./routes/linkedin'));
-app.use(require('./routes/pages'));
+  console.log(`[Config] IG_USERNAME=${config.IG_USERNAME}  LI_COMPANY=${config.LI_COMPANY_URL}`);
 
-// ── Static assets (behind auth) ──
-app.use('/data/images/ig', requireAuth, express.static(config.IG_IMAGES));
-app.use('/data/images/li', requireAuth, express.static(config.LI_IMAGES));
-app.use(requireAuth, express.static(path.join(__dirname, 'public')));
+  // ── App Engine sits behind a load balancer ──
+  app.set('trust proxy', 1);
 
-// ── Start ──
-app.listen(config.PORT, async () => {
-  console.log(`Finance Club Dashboard running on http://localhost:${config.PORT}`);
-  ensureDataDir();
-  migrateDataFiles();
+  // ── Global middleware ──
+  app.use(express.json());
+  app.use(express.urlencoded({ extended: true }));
+  app.use(sessionMiddleware());
 
-  ig.loadCacheFromDisk();
-  li.loadCacheFromDisk();
+  // ── Routes ──
+  app.use(require('./routes/auth'));
+  app.use(require('./routes/cron'));
+  app.use(require('./routes/instagram'));
+  app.use(require('./routes/linkedin'));
+  app.use(require('./routes/pages'));
 
-  if (!ig.getCache().lastFetch) {
-    console.log('[Startup] No IG cache — running initial scrape...');
-    await ig.refreshCache();
-  }
-  if (!li.getCache().lastFetch) {
-    console.log('[Startup] No LI cache — running initial scrape...');
-    await li.refreshCache();
-  }
+  // ── Static assets (behind auth) ──
+  app.use('/data/images/ig', requireAuth, express.static(config.IG_IMAGES));
+  app.use('/data/images/li', requireAuth, express.static(config.LI_IMAGES));
+  app.use(requireAuth, express.static(path.join(__dirname, 'public')));
+
+  // ── Start ──
+  app.listen(config.PORT, async () => {
+    console.log(`Finance Club Dashboard running on port ${config.PORT}`);
+    ensureDataDir();
+    migrateDataFiles();
+
+    ig.loadCacheFromDisk();
+    li.loadCacheFromDisk();
+
+    if (!ig.getCache().lastFetch) {
+      console.log('[Startup] No IG cache — running initial scrape...');
+      await ig.refreshCache();
+    }
+    if (!li.getCache().lastFetch) {
+      console.log('[Startup] No LI cache — running initial scrape...');
+      await li.refreshCache();
+    }
+  });
+}
+
+start().catch(err => {
+  console.error('[Fatal] Failed to start:', err);
+  process.exit(1);
 });

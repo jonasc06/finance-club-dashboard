@@ -1,28 +1,29 @@
-# Dependencies
+.git
+.gitignore
+
 node_modules/
 
-# Environment
 .env
 
-# Data / history snapshots
-data/
 
-# OS files
+data/
+sessions/
+
 .DS_Store
 Thumbs.db
 
-# Logs
 *.log
 
-# Sessions
-sessions/
-
-# Python
 __pycache__/
 *.pyc
 .venv/
 venv/
 
-# IDE
 .vscode/
 .idea/
+
+.env.yaml
+
+README.md
+LICENSE
+*.md
