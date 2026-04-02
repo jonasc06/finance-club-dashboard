@@ -1,4 +1,4 @@
-const session = require('express-session');
+const cookieSession = require('cookie-session');
 const bcrypt  = require('bcrypt');
 const config  = require('../config');
 
@@ -13,19 +13,18 @@ function getPasswordHash() {
   return _passwordHash;
 }
 
+
 function sessionMiddleware() {
-  return session({
-    secret: config.SESSION_SECRET,
-    resave: false,
-    saveUninitialized: false,
-    cookie: {
-      maxAge: 8 * 60 * 60 * 1000,
-      secure: IS_PRODUCTION,
-      httpOnly: true,
-      sameSite: 'lax',
-    },
+  return cookieSession({
+    name: 'session',
+    keys: [config.SESSION_SECRET],
+    maxAge: 8 * 60 * 60 * 1000,
+    secure: IS_PRODUCTION,
+    httpOnly: true,
+    sameSite: 'lax',
   });
 }
+
 
 function requireAuth(req, res, next) {
   if (req.session && req.session.authenticated) return next();
