@@ -73,16 +73,15 @@ async function start() {
     ensureDataDir();
     migrateDataFiles();
 
+    // Load cached data from GCS — no scraping on startup
     await ig.loadCacheFromDisk();
     await li.loadCacheFromDisk();
 
     if (!ig.getCache().lastFetch) {
-      console.log('[Startup] No IG cache — running initial scrape...');
-      await ig.refreshCache();
+      console.log('[Startup] No IG cache yet — will be populated on next cron run');
     }
     if (!li.getCache().lastFetch) {
-      console.log('[Startup] No LI cache — running initial scrape...');
-      await li.refreshCache();
+      console.log('[Startup] No LI cache yet — will be populated on next cron run');
     }
   });
 }

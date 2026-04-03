@@ -36,7 +36,13 @@ async function loadCacheFromDisk() {
     if (!data) return;
     cache = data;
 
-    // Fix old image paths
+    const GCS_PREFIX = 'https://storage.googleapis.com/finance-club-dashboard-cache/images/';
+
+    // Fix GCS URLs → proxy paths
+    if (cache.account && cache.account.profile_picture_url && cache.account.profile_picture_url.startsWith(GCS_PREFIX)) {
+      cache.account.profile_picture_url = '/data/images/' + cache.account.profile_picture_url.slice(GCS_PREFIX.length);
+    }
+    // Fix old /data/images/ → /data/images/ig/
     if (cache.account && cache.account.profile_picture_url
         && cache.account.profile_picture_url.startsWith('/data/images/')
         && !cache.account.profile_picture_url.startsWith('/data/images/ig/')) {
@@ -44,6 +50,9 @@ async function loadCacheFromDisk() {
     }
     if (cache.posts) {
       cache.posts.forEach(p => {
+        if (p.local_image && p.local_image.startsWith(GCS_PREFIX)) {
+          p.local_image = '/data/images/' + p.local_image.slice(GCS_PREFIX.length);
+        }
         if (p.local_image && p.local_image.startsWith('/data/images/')
             && !p.local_image.startsWith('/data/images/ig/')) {
           p.local_image = p.local_image.replace('/data/images/', '/data/images/ig/');
@@ -66,8 +75,10 @@ function fetchedToday() {
 function getCache() { return cache; }
 
 // ── Apify Fetch ──
-async function fetchFromApify() {
-  console.log(`[Apify/IG] Scraping @${config.IG_USERNAME}...`);
+async function fetchFromApify(options = {}) {
+  const { fullImageRescrape = true } = options;
+
+  console.log(`[Apify/IG] Scraping @${config.IG_USERNAME}... (fullImages: ${fullImageRescrape})`);
 
   const url = 'https://api.apify.com/v2/acts/apify~instagram-profile-scraper/run-sync-get-dataset-items';
 
@@ -85,8 +96,12 @@ async function fetchFromApify() {
 
   const profile = data[0];
 
+  // ── Profile picture: only re-download if missing or full rescrape ──
   const originalPicUrl = profile.profilePicUrlHD || profile.profilePicUrl || '';
-  const localPicUrl = await downloadProfilePic(originalPicUrl, 'profile_' + (profile.username || config.IG_USERNAME), 'ig');
+  let localPicUrl = cache.account?.profile_picture_url || null;
+  if (fullImageRescrape || !localPicUrl) {
+    localPicUrl = await downloadProfilePic(originalPicUrl, 'profile_' + (profile.username || config.IG_USERNAME), 'ig');
+  }
 
   const account = {
     id: profile.id || profile.igId || '',
@@ -103,6 +118,17 @@ async function fetchFromApify() {
   };
 
   const rawPosts = profile.latestPosts || profile.posts || [];
+
+  // ── Build set of cached post IDs for skipping image downloads ──
+  const cachedPostImages = {};
+  if (!fullImageRescrape && cache.posts) {
+    cache.posts.forEach(p => {
+      if (p.id && p.local_image) {
+        cachedPostImages[p.id] = p.local_image;
+      }
+    });
+  }
+
   let posts = rawPosts.slice(0, 12).map(p => {
     const likes    = p.likesCount ?? p.likes ?? 0;
     const comments = p.commentsCount ?? p.comments ?? 0;
@@ -117,13 +143,16 @@ async function fetchFromApify() {
     if (!imageUrl && p.childPosts && p.childPosts.length > 0) imageUrl = p.childPosts[0].displayUrl || p.childPosts[0].imageUrl || '';
     if (media_type === 'VIDEO' && !imageUrl) imageUrl = p.previewUrl || p.thumbnailUrl || p.videoThumbnailUrl || '';
 
+    const postId = p.shortCode || p.id || '';
+
     return {
-      id: p.shortCode || p.id || '',
+      id: postId,
       caption: (p.caption || '').slice(0, 500),
       media_type,
       timestamp: p.timestamp ? p.timestamp : p.takenAtTimestamp ? new Date(p.takenAtTimestamp * 1000).toISOString() : '',
       permalink: p.url || (p.shortCode ? `https://www.instagram.com/p/${p.shortCode}/` : ''),
       _originalImageUrl: imageUrl,
+      _cachedImage: cachedPostImages[postId] || null,
       media_url: '',
       thumbnail_url: '',
       local_image: null,
@@ -131,9 +160,32 @@ async function fetchFromApify() {
     };
   });
 
-  console.log(`[Apify/IG] Downloading ${posts.length} post images...`);
-  posts = await downloadPostImages(posts, 'ig');
-  posts = posts.map(({ _originalImageUrl, ...rest }) => rest);
+  // ── Download only NEW images ──
+  const postsNeedingImages = posts.filter(p => !p._cachedImage);
+  const postsWithCached    = posts.filter(p => p._cachedImage);
+
+  console.log(`[Apify/IG] Images: ${postsWithCached.length} cached, ${postsNeedingImages.length} to download`);
+
+  const downloaded = postsNeedingImages.length > 0
+    ? await downloadPostImages(postsNeedingImages, 'ig')
+    : [];
+
+  // Merge: use cached image for old posts, downloaded for new
+  const downloadedMap = {};
+  downloaded.forEach(p => { downloadedMap[p.id] = p; });
+
+  posts = posts.map(p => {
+    if (p._cachedImage) {
+      return { ...p, local_image: p._cachedImage };
+    }
+    if (downloadedMap[p.id]) {
+      return downloadedMap[p.id];
+    }
+    return p;
+  });
+
+  // Clean up internal fields
+  posts = posts.map(({ _originalImageUrl, _cachedImage, ...rest }) => rest);
 
   const totalLikes    = posts.reduce((s, p) => s + p.insights.likes, 0);
   const totalComments = posts.reduce((s, p) => s + p.insights.comments, 0);
@@ -172,9 +224,9 @@ async function fetchFromApify() {
 }
 
 // ── Refresh ──
-async function refreshCache() {
+async function refreshCache(options = {}) {
   try {
-    cache = await fetchFromApify();
+    cache = await fetchFromApify(options);
     await saveCacheToDisk();
     console.log(`[IG Cache] Updated at ${cache.lastFetch}`);
     return { ok: true, lastFetch: cache.lastFetch };

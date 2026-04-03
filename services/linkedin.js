@@ -35,6 +35,21 @@ async function loadCacheFromDisk() {
     const data = await readJSON(config.LI_CACHE_FILE, null);
     if (!data) return;
     cache = data;
+
+    const GCS_PREFIX = 'https://storage.googleapis.com/finance-club-dashboard-cache/images/';
+
+    // Fix GCS URLs → proxy paths
+    if (cache.account && cache.account.logo_url && cache.account.logo_url.startsWith(GCS_PREFIX)) {
+      cache.account.logo_url = '/data/images/' + cache.account.logo_url.slice(GCS_PREFIX.length);
+    }
+    if (cache.posts) {
+      cache.posts.forEach(p => {
+        if (p.local_image && p.local_image.startsWith(GCS_PREFIX)) {
+          p.local_image = '/data/images/' + p.local_image.slice(GCS_PREFIX.length);
+        }
+      });
+    }
+
     console.log(`[LI Cache] Loaded from disk — last fetch: ${cache.lastFetch}`);
   } catch {}
 }
@@ -51,46 +66,66 @@ function fetchedToday() {
 function getCache() { return cache; }
 
 // ── Apify Fetch ──
-async function fetchFromApify() {
+async function fetchFromApify(options = {}) {
+  const { fullImageRescrape = true } = options;
   const companyUrl = decodeURIComponent(config.LI_COMPANY_URL);
-  console.log(`[Apify/LI] Scraping company: ${companyUrl}...`);
+  console.log(`[Apify/LI] Scraping company: ${companyUrl}... (fullImages: ${fullImageRescrape})`);
 
-  // Step 1: Fetch company profile
-  console.log('[Apify/LI] Step 1 — Fetching company profile...');
-  const profileEndpoint = 'https://api.apify.com/v2/acts/dev_fusion~linkedin-company-scraper/run-sync-get-dataset-items';
-
+  // ── Step 1: Profile — skip the dedicated actor (returns 0 items anyway)
+  //    Instead, extract profile from posts author field below ──
   let company = {};
-  try {
-    const { data: profileData } = await axios.post(profileEndpoint, {
-      profileUrls: [companyUrl],
-    }, {
-      params: { token: config.APIFY_TOKEN },
-      headers: { 'Content-Type': 'application/json' },
-      timeout: 120000,
-    });
 
-    console.log(`[Apify/LI] Profile items received: ${profileData?.length || 0}`);
-    if (profileData?.[0]) {
-      console.log('[Apify/LI] Profile keys:', Object.keys(profileData[0]).join(', '));
-      company = profileData[0];
+  // Only call profile scraper on full monthly rescrape
+  if (fullImageRescrape) {
+    console.log('[Apify/LI] Step 1 — Fetching company profile (full rescrape)...');
+    const profileEndpoint = 'https://api.apify.com/v2/acts/dev_fusion~linkedin-company-scraper/run-sync-get-dataset-items';
+    try {
+      const { data: profileData } = await axios.post(profileEndpoint, {
+        profileUrls: [companyUrl],
+      }, {
+        params: { token: config.APIFY_TOKEN },
+        headers: { 'Content-Type': 'application/json' },
+        timeout: 120000,
+      });
+
+      console.log(`[Apify/LI] Profile items received: ${profileData?.length || 0}`);
+      if (profileData?.[0]) {
+        console.log('[Apify/LI] Profile keys:', Object.keys(profileData[0]).join(', '));
+        company = profileData[0];
+      }
+    } catch (err) {
+      console.warn('[Apify/LI] Profile scraper failed:', err.message);
     }
-  } catch (err) {
-    console.warn('[Apify/LI] Profile scraper failed, will try fallback from posts:', err.message);
+  } else {
+    console.log('[Apify/LI] Step 1 — Skipping profile scraper (light refresh)');
+    // Reuse cached account data
+    if (cache.account) {
+      company = {
+        companyName: cache.account.name,
+        description: cache.account.description,
+        tagline: cache.account.tagline,
+        followerCount: cache.account.followers_count,
+        employeeCount: cache.account.employee_count,
+        logoResolutionResult: cache.account.logo_url,
+        websiteUrl: cache.account.website,
+        url: cache.account.linkedin_url,
+      };
+    }
   }
 
-  // Step 2: Fetch company posts
+  // ── Step 2: Fetch company posts ──
   console.log('[Apify/LI] Step 2 — Fetching company posts...');
   const postsEndpoint = 'https://api.apify.com/v2/acts/harvestapi~linkedin-company-posts/run-sync-get-dataset-items';
 
   const { data: postsData } = await axios.post(postsEndpoint, {
     targetUrls: [companyUrl],
+    resultsLimit: fullImageRescrape ? 50 : 15,
   }, {
     params: { token: config.APIFY_TOKEN },
     headers: { 'Content-Type': 'application/json' },
     timeout: 120000,
   });
 
-  console.log('[Apify/LI] Raw posts response (first 500 chars):', JSON.stringify(postsData).slice(0, 500));
   console.log(`[Apify/LI] Post items received: ${postsData?.length || 0}`);
   if (postsData?.[0]) console.log('[Apify/LI] First post keys:', Object.keys(postsData[0]).join(', '));
 
@@ -106,21 +141,20 @@ async function fetchFromApify() {
       description: author.description || author.headline || '',
       tagline: author.tagline || '',
       followerCount: author.followerCount ?? author.followersCount ?? 0,
-      employeeCount: author.employeeCount ?? company.employeeCount ?? 0,
+      employeeCount: author.employeeCount ?? 0,
       logoResolutionResult: author.profilePicture || author.logo || author.image || '',
       logoUrl: author.profilePicture || author.logo || author.image || '',
       websiteUrl: author.websiteUrl || author.url || '',
       url: author.linkedinUrl || author.url || companyUrl,
-      ...company,  // keep any fields from profile scraper that did come through
     };
-    // Override empty fields from profile scraper with author data
-    if (!company.followerCount && (author.followerCount || author.followersCount)) {
-      company.followerCount = author.followerCount ?? author.followersCount ?? 0;
-    }
   }
 
+  // ── Logo: only re-download if missing or full rescrape ──
   const originalLogoUrl = company.logoResolutionResult || company.logoUrl || company.logo || '';
-  const localLogoUrl = await downloadProfilePic(originalLogoUrl, 'li_logo', 'li');
+  let localLogoUrl = cache.account?.logo_url || null;
+  if (fullImageRescrape || !localLogoUrl) {
+    localLogoUrl = await downloadProfilePic(originalLogoUrl, 'li_logo', 'li');
+  }
 
   const account = {
     name: company.companyName || company.name || '',
@@ -135,6 +169,16 @@ async function fetchFromApify() {
   };
 
   console.log(`[Apify/LI] Account built — name: "${account.name}", followers: ${account.followers_count}`);
+
+  // ── Build set of cached post IDs for skipping image downloads ──
+  const cachedPostImages = {};
+  if (!fullImageRescrape && cache.posts) {
+    cache.posts.forEach(p => {
+      if (p.id && p.local_image) {
+        cachedPostImages[p.id] = p.local_image;
+      }
+    });
+  }
 
   let posts = rawPosts.slice(0, 12).map(p => {
     const eng = p.engagement || {};
@@ -177,13 +221,16 @@ async function fetchFromApify() {
     }
     if (!timestamp) timestamp = p.postedDate || p.publishedAt || '';
 
+    const postId = p.id || '';
+
     return {
-      id: p.id || '',
+      id: postId,
       text: (p.content || '').slice(0, 500),
       media_type,
       timestamp,
       permalink: p.linkedinUrl || '',
       _originalImageUrl: imageUrl,
+      _cachedImage: cachedPostImages[postId] || null,
       local_image: null,
       insights: {
         reactions: totalReactionsForPost || likes,
@@ -195,9 +242,31 @@ async function fetchFromApify() {
     };
   });
 
-  console.log(`[Apify/LI] Downloading ${posts.length} post images...`);
-  posts = await downloadPostImages(posts, 'li');
-  posts = posts.map(({ _originalImageUrl, ...rest }) => rest);
+  // ── Download only NEW images ──
+  const postsNeedingImages = posts.filter(p => !p._cachedImage);
+  const postsWithCached    = posts.filter(p => p._cachedImage);
+
+  console.log(`[Apify/LI] Images: ${postsWithCached.length} cached, ${postsNeedingImages.length} to download`);
+
+  const downloaded = postsNeedingImages.length > 0
+    ? await downloadPostImages(postsNeedingImages, 'li')
+    : [];
+
+  const downloadedMap = {};
+  downloaded.forEach(p => { downloadedMap[p.id] = p; });
+
+  posts = posts.map(p => {
+    if (p._cachedImage) {
+      return { ...p, local_image: p._cachedImage };
+    }
+    if (downloadedMap[p.id]) {
+      return downloadedMap[p.id];
+    }
+    return p;
+  });
+
+  // Clean up internal fields
+  posts = posts.map(({ _originalImageUrl, _cachedImage, ...rest }) => rest);
 
   const totalReactions = posts.reduce((s, p) => s + p.insights.reactions, 0);
   const totalComments  = posts.reduce((s, p) => s + p.insights.comments, 0);
@@ -236,9 +305,9 @@ async function fetchFromApify() {
 }
 
 // ── Refresh ──
-async function refreshCache() {
+async function refreshCache(options = {}) {
   try {
-    cache = await fetchFromApify();
+    cache = await fetchFromApify(options);
     await saveCacheToDisk();
     console.log(`[LI Cache] Updated at ${cache.lastFetch}`);
     return { ok: true, lastFetch: cache.lastFetch };

@@ -11,9 +11,6 @@
     header h1{font-size:1.3rem}
     .right{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
     #lastFetch{font-size:.8rem;opacity:.7}
-    .btn-refresh{padding:8px 18px;background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.3);border-radius:8px;cursor:pointer;font-size:.85rem;transition:all .2s}
-    .btn-refresh:hover{background:rgba(255,255,255,.25)}
-    .btn-refresh:disabled{opacity:.4;cursor:not-allowed}
     .btn-logout{padding:8px 16px;background:transparent;color:rgba(255,255,255,.6);border:1px solid rgba(255,255,255,.2);border-radius:8px;cursor:pointer;font-size:.8rem}
     .source-badge{font-size:.7rem;background:rgba(255,255,255,.15);padding:3px 10px;border-radius:20px}
     main{padding:32px;max-width:1280px;margin:0 auto}
@@ -88,7 +85,6 @@
   <div class="right">
     <span id="lastFetch">Loading...</span>
     <span id="sourceBadge" class="source-badge"></span>
-    <button class="btn-refresh" id="btnRefresh" onclick="doRefresh()">🔄 Refresh Data</button>
     <form method="POST" action="/logout" style="margin:0">
       <button class="btn-logout" type="submit">Logout</button>
     </form>
@@ -265,19 +261,6 @@ async function loadData(){
   catch(e){document.getElementById('app').innerHTML='<div class="err">\u274C '+e.message+'</div>'}
 }
 
-async function doRefresh(){
-  var btn=document.getElementById('btnRefresh');
-  btn.disabled=true;btn.textContent='\u23F3 Scraping...';
-  document.getElementById('lastFetch').textContent='\u23F3 Fetching fresh data from Instagram...';
-  try{
-    var r=await fetch('/api/refresh',{method:'POST'});
-    var d=await r.json();
-    if(r.status===429){showToast(d.error||'Already fetched today','warn');btn.textContent='\uD83D\uDD04 Refresh Data';btn.disabled=false;return;}
-    showToast('Data refreshed successfully!','ok');
-    await loadData();
-  }catch(e){showToast('Refresh failed: '+e.message,'warn')}
-  btn.textContent='\uD83D\uDD04 Refresh Data';btn.disabled=false;
-}
 
 loadData();
 </script>
