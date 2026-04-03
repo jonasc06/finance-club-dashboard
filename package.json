@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "@google-cloud/secret-manager": "^6.1.1",
+    "@google-cloud/storage": "^7.19.0",
     "axios": "^1.7.2",
     "bcrypt": "^5.1.1",
     "cookie-session": "^2.1.1",

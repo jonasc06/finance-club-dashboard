@@ -6,16 +6,16 @@ const { downloadPostImages, downloadProfilePic } = require('./images');
 let cache = { account: null, insights: null, posts: null, lastFetch: null };
 
 // ── History ──
-function loadHistory() {
-  return readJSON(config.IG_HISTORY_FILE, { followers: [], engagement_rate: [] });
+async function loadHistory() {
+  return await readJSON(config.IG_HISTORY_FILE, { followers: [], engagement_rate: [] });
 }
 
-function saveHistory(history) {
-  writeJSON(config.IG_HISTORY_FILE, history);
+async function saveHistory(history) {
+  await writeJSON(config.IG_HISTORY_FILE, history);
 }
 
-function appendSnapshot(followersCount, engagementRate) {
-  const history = loadHistory();
+async function appendSnapshot(followersCount, engagementRate) {
+  const history = await loadHistory();
   const today = new Date().toISOString().slice(0, 10);
   if (!history.followers.some(e => e.date === today)) {
     history.followers.push({ date: today, value: followersCount });
@@ -25,14 +25,14 @@ function appendSnapshot(followersCount, engagementRate) {
   }
   history.followers = history.followers.slice(-90);
   history.engagement_rate = history.engagement_rate.slice(-90);
-  saveHistory(history);
+  await saveHistory(history);
   return history;
 }
 
 // ── Cache ──
-function loadCacheFromDisk() {
+async function loadCacheFromDisk() {
   try {
-    const data = readJSON(config.IG_CACHE_FILE, null);
+    const data = await readJSON(config.IG_CACHE_FILE, null);
     if (!data) return;
     cache = data;
 
@@ -54,8 +54,8 @@ function loadCacheFromDisk() {
   } catch {}
 }
 
-function saveCacheToDisk() {
-  writeJSON(config.IG_CACHE_FILE, cache);
+async function saveCacheToDisk() {
+  await writeJSON(config.IG_CACHE_FILE, cache);
 }
 
 function fetchedToday() {
@@ -141,7 +141,7 @@ async function fetchFromApify() {
   const followers     = account.followers_count || 1;
   const engagementRate = Math.round(((totalLikes + totalComments) / numPosts) / followers * 10000) / 100;
 
-  const history = appendSnapshot(account.followers_count, engagementRate);
+  const history = await appendSnapshot(account.followers_count, engagementRate);
 
   const insights = [
     {
@@ -175,7 +175,7 @@ async function fetchFromApify() {
 async function refreshCache() {
   try {
     cache = await fetchFromApify();
-    saveCacheToDisk();
+    await saveCacheToDisk();
     console.log(`[IG Cache] Updated at ${cache.lastFetch}`);
     return { ok: true, lastFetch: cache.lastFetch };
   } catch (err) {

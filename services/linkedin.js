@@ -6,16 +6,16 @@ const { downloadPostImages, downloadProfilePic } = require('./images');
 let cache = { account: null, insights: null, posts: null, lastFetch: null };
 
 // ── History ──
-function loadHistory() {
-  return readJSON(config.LI_HISTORY_FILE, { followers: [], engagement_rate: [] });
+async function loadHistory() {
+  return await readJSON(config.LI_HISTORY_FILE, { followers: [], engagement_rate: [] });
 }
 
-function saveHistory(history) {
-  writeJSON(config.LI_HISTORY_FILE, history);
+async function saveHistory(history) {
+  await writeJSON(config.LI_HISTORY_FILE, history);
 }
 
-function appendSnapshot(followersCount, engagementRate) {
-  const history = loadHistory();
+async function appendSnapshot(followersCount, engagementRate) {
+  const history = await loadHistory();
   const today = new Date().toISOString().slice(0, 10);
   if (!history.followers.some(e => e.date === today)) {
     history.followers.push({ date: today, value: followersCount });
@@ -25,22 +25,22 @@ function appendSnapshot(followersCount, engagementRate) {
   }
   history.followers = history.followers.slice(-90);
   history.engagement_rate = history.engagement_rate.slice(-90);
-  saveHistory(history);
+  await saveHistory(history);
   return history;
 }
 
 // ── Cache ──
-function loadCacheFromDisk() {
+async function loadCacheFromDisk() {
   try {
-    const data = readJSON(config.LI_CACHE_FILE, null);
+    const data = await readJSON(config.LI_CACHE_FILE, null);
     if (!data) return;
     cache = data;
     console.log(`[LI Cache] Loaded from disk — last fetch: ${cache.lastFetch}`);
   } catch {}
 }
 
-function saveCacheToDisk() {
-  writeJSON(config.LI_CACHE_FILE, cache);
+async function saveCacheToDisk() {
+  await writeJSON(config.LI_CACHE_FILE, cache);
 }
 
 function fetchedToday() {
@@ -59,33 +59,24 @@ async function fetchFromApify() {
   console.log('[Apify/LI] Step 1 — Fetching company profile...');
   const profileEndpoint = 'https://api.apify.com/v2/acts/dev_fusion~linkedin-company-scraper/run-sync-get-dataset-items';
 
-  const { data: profileData } = await axios.post(profileEndpoint, {
-    profileUrls: [companyUrl],
-  }, {
-    params: { token: config.APIFY_TOKEN },
-    headers: { 'Content-Type': 'application/json' },
-    timeout: 120000,
-  });
+  let company = {};
+  try {
+    const { data: profileData } = await axios.post(profileEndpoint, {
+      profileUrls: [companyUrl],
+    }, {
+      params: { token: config.APIFY_TOKEN },
+      headers: { 'Content-Type': 'application/json' },
+      timeout: 120000,
+    });
 
-  console.log(`[Apify/LI] Profile items received: ${profileData?.length || 0}`);
-  if (profileData?.[0]) console.log('[Apify/LI] Profile keys:', Object.keys(profileData[0]).join(', '));
-
-  const company = (profileData && profileData.length > 0) ? profileData[0] : {};
-
-  const originalLogoUrl = company.logoResolutionResult || company.logoUrl || company.logo || '';
-  const localLogoUrl = await downloadProfilePic(originalLogoUrl, 'li_logo', 'li');
-
-  const account = {
-    name: company.companyName || company.name || '',
-    description: company.description || '',
-    tagline: company.tagline || '',
-    followers_count: company.followerCount ?? 0,
-    employee_count: company.employeeCount ?? 0,
-    logo_url: localLogoUrl || originalLogoUrl,
-    cover_url: company.croppedCoverImage || company.originalCoverImage || '',
-    website: company.websiteUrl || '',
-    linkedin_url: company.url || companyUrl,
-  };
+    console.log(`[Apify/LI] Profile items received: ${profileData?.length || 0}`);
+    if (profileData?.[0]) {
+      console.log('[Apify/LI] Profile keys:', Object.keys(profileData[0]).join(', '));
+      company = profileData[0];
+    }
+  } catch (err) {
+    console.warn('[Apify/LI] Profile scraper failed, will try fallback from posts:', err.message);
+  }
 
   // Step 2: Fetch company posts
   console.log('[Apify/LI] Step 2 — Fetching company posts...');
@@ -105,6 +96,45 @@ async function fetchFromApify() {
 
   const rawPosts = (postsData || []).filter(p => p.type === 'post');
   console.log(`[Apify/LI] Posts after type=post filter: ${rawPosts.length}`);
+
+  // ── Fallback: extract profile info from posts' author field ──
+  if (!company.companyName && !company.name && rawPosts.length > 0) {
+    const author = rawPosts[0].author || {};
+    console.log('[Apify/LI] Using fallback profile from posts author:', JSON.stringify(author).slice(0, 500));
+    company = {
+      companyName: author.name || author.companyName || '',
+      description: author.description || author.headline || '',
+      tagline: author.tagline || '',
+      followerCount: author.followerCount ?? author.followersCount ?? 0,
+      employeeCount: author.employeeCount ?? company.employeeCount ?? 0,
+      logoResolutionResult: author.profilePicture || author.logo || author.image || '',
+      logoUrl: author.profilePicture || author.logo || author.image || '',
+      websiteUrl: author.websiteUrl || author.url || '',
+      url: author.linkedinUrl || author.url || companyUrl,
+      ...company,  // keep any fields from profile scraper that did come through
+    };
+    // Override empty fields from profile scraper with author data
+    if (!company.followerCount && (author.followerCount || author.followersCount)) {
+      company.followerCount = author.followerCount ?? author.followersCount ?? 0;
+    }
+  }
+
+  const originalLogoUrl = company.logoResolutionResult || company.logoUrl || company.logo || '';
+  const localLogoUrl = await downloadProfilePic(originalLogoUrl, 'li_logo', 'li');
+
+  const account = {
+    name: company.companyName || company.name || '',
+    description: company.description || '',
+    tagline: company.tagline || '',
+    followers_count: company.followerCount ?? 0,
+    employee_count: company.employeeCount ?? 0,
+    logo_url: localLogoUrl || originalLogoUrl,
+    cover_url: company.croppedCoverImage || company.originalCoverImage || '',
+    website: company.websiteUrl || '',
+    linkedin_url: company.url || companyUrl,
+  };
+
+  console.log(`[Apify/LI] Account built — name: "${account.name}", followers: ${account.followers_count}`);
 
   let posts = rawPosts.slice(0, 12).map(p => {
     const eng = p.engagement || {};
@@ -176,7 +206,7 @@ async function fetchFromApify() {
   const followers      = account.followers_count || 1;
   const engagementRate = Math.round(((totalReactions + totalComments + totalShares) / numPosts) / followers * 10000) / 100;
 
-  const history = appendSnapshot(account.followers_count, engagementRate);
+  const history = await appendSnapshot(account.followers_count, engagementRate);
 
   const insights = [
     {
@@ -209,7 +239,7 @@ async function fetchFromApify() {
 async function refreshCache() {
   try {
     cache = await fetchFromApify();
-    saveCacheToDisk();
+    await saveCacheToDisk();
     console.log(`[LI Cache] Updated at ${cache.lastFetch}`);
     return { ok: true, lastFetch: cache.lastFetch };
   } catch (err) {

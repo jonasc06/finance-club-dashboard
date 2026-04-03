@@ -1,14 +1,23 @@
 const fs   = require('fs');
 const path = require('path');
 const config = require('../config');
+const storage = require('./storage');
+
+const IS_PRODUCTION = process.env.NODE_ENV === 'production';
 
 function ensureDataDir() {
-  [config.DATA_DIR, config.IG_IMAGES, config.LI_IMAGES].forEach(d => {
-    if (!fs.existsSync(d)) fs.mkdirSync(d, { recursive: true });
-  });
+  if (!IS_PRODUCTION) {
+    [config.DATA_DIR, config.IG_IMAGES, config.LI_IMAGES].forEach(d => {
+      if (!fs.existsSync(d)) fs.mkdirSync(d, { recursive: true });
+    });
+  }
+  // In production: no local dirs needed — everything goes to GCS
 }
 
 function migrateDataFiles() {
+  // Migration only makes sense locally (no legacy files on App Engine)
+  if (IS_PRODUCTION) return;
+
   ensureDataDir();
 
   // Migrate cache.json → ig_cache.json
@@ -53,17 +62,14 @@ function migrateDataFiles() {
   }
 }
 
-// Generic JSON read/write helpers
-function readJSON(filepath, fallback) {
-  try {
-    if (fs.existsSync(filepath)) return JSON.parse(fs.readFileSync(filepath, 'utf8'));
-  } catch {}
-  return fallback;
+// ── JSON read/write — delegates to GCS in production, disk locally ──
+
+async function readJSON(filepath, fallback) {
+  return storage.readJSON(filepath, fallback);
 }
 
-function writeJSON(filepath, data) {
-  ensureDataDir();
-  fs.writeFileSync(filepath, JSON.stringify(data, null, 2));
+async function writeJSON(filepath, data) {
+  return storage.writeJSON(filepath, data);
 }
 
 module.exports = { ensureDataDir, migrateDataFiles, readJSON, writeJSON };
