@@ -161,7 +161,6 @@ function render(d){
   document.getElementById('sourceBadge').textContent=source==='apify'?'\uD83D\uDD17 Apify':source==='mock'?'\uD83E\uDDEA Mock':'\uD83D\uDCE1 Live';
 
   var followers=a.followers_count||0;
-  var employees=a.employee_count||0;
   var engRate=cm.engagement_rate||0;
   var avgReactions=cm.avg_reactions||0;
   var avgComments=cm.avg_comments||0;
@@ -296,7 +295,6 @@ function render(d){
   /* KPI cards */
   html+='<div class="kpi-grid">';
   html+='<div class="kpi-card" style="--accent:#0a66c2"><div class="label">Followers</div><div class="value">'+fmt(followers)+'</div><div class="sub">Total</div>'+followerChange+'</div>';
-  html+='<div class="kpi-card" style="--accent:#5f4b8b"><div class="label">Employees</div><div class="value">'+fmt(employees)+'</div><div class="sub">Team size</div></div>';
   html+='<div class="kpi-card" style="--accent:#27ae60"><div class="label">Engagement Rate</div><div class="value">'+pct(engRate)+'</div><div class="sub">(reactions+comments+shares) / followers</div></div>';
   html+='<div class="kpi-card" style="--accent:#e16745"><div class="label">Avg Reactions</div><div class="value">'+fmt(Math.round(avgReactions))+'</div><div class="sub">Per post</div></div>';
   html+='<div class="kpi-card" style="--accent:#f39c12"><div class="label">Avg Comments</div><div class="value">'+fmt(Math.round(avgComments))+'</div><div class="sub">Per post</div></div>';
