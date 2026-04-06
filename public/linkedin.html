@@ -182,7 +182,7 @@ function render(d){
   /* bar chart data */
   var chronoPosts=posts.slice().sort(function(x,y){return new Date(x.timestamp||0)-new Date(y.timestamp||0)});
   var postLabels=chronoPosts.map(function(p){
-    return p.timestamp?new Date(p.timestamp).toLocaleDateString('de-DE',{day:'2-digit',month:'short'}):'?';
+    return p.timestamp?new Date(p.timestamp).toLocaleDateString('de-DE',{day:'2-digit',month:'short',year:'numeric'}):'?';
   });
   var postReactions=chronoPosts.map(function(p){return p.insights?p.insights.reactions||0:0});
   var postComments=chronoPosts.map(function(p){return p.insights?p.insights.comments||0:0});
@@ -245,7 +245,7 @@ function render(d){
 
   /* ── Post cards ── */
   var postsHTML='';
-  posts.forEach(function(p){
+  posts.slice().sort(function(x,y){return new Date(y.timestamp||0)-new Date(x.timestamp||0)}).forEach(function(p){
     var ins=p.insights||{};
     var eng=ins.engagement||0;
     var isBest=bestPost&&p.id===bestPost.id;
@@ -267,7 +267,7 @@ function render(d){
     postsHTML+='<span>\uD83D\uDD01 '+fmt(ins.shares)+'</span>';
     postsHTML+='<span'+(isBest?' class="highlight"':'')+'>\uD83D\uDD25 '+fmt(eng)+'</span>';
     postsHTML+='</div>';
-    postsHTML+='<div class="post-date"><span>'+relDate(p.timestamp)+'</span><span class="media-badge">'+(p.media_type||'')+'</span></div>';
+    postsHTML+='<div class="post-date"><span>'+relDate(p.timestamp)+(p.timestamp?', '+new Date(p.timestamp).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'}):'')+'</span><span class="media-badge">'+(p.media_type||'')+'</span></div>';
     postsHTML+='</div></a>';
   });
 
