@@ -11,7 +11,7 @@ function shouldRunBiDaily(lastFetch) {
   const last = new Date(lastFetch);
   const now  = new Date();
   const hoursSince = (now - last) / (1000 * 60 * 60);
-  return hoursSince >= 30; // ~2 days with a 4h buffer
+  return hoursSince >= 1; // ~2 days with a 4h buffer
 }
 
 // ──────────────────────────────────────────────────────
