@@ -17,17 +17,27 @@ async function saveHistory(history) {
 async function appendSnapshot(followersCount, engagementRate) {
   const history = await loadHistory();
   const today = new Date().toISOString().slice(0, 10);
-  if (!history.followers.some(e => e.date === today)) {
+
+  // Purge old broken entries that stored 0
+  history.followers = history.followers.filter(e => e.value > 0);
+
+  var existingF = history.followers.find(e => e.date === today);
+  if (!existingF) {
     history.followers.push({ date: today, value: followersCount });
+  } else if (existingF.value === 0 && followersCount > 0) {
+    existingF.value = followersCount;
   }
+
   if (engagementRate != null && !history.engagement_rate.some(e => e.date === today)) {
     history.engagement_rate.push({ date: today, value: engagementRate });
   }
+
   history.followers = history.followers.slice(-90);
   history.engagement_rate = history.engagement_rate.slice(-90);
   await saveHistory(history);
   return history;
 }
+
 
 // ── Cache ──
 async function loadCacheFromDisk() {
