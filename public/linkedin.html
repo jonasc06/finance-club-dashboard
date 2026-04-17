@@ -289,6 +289,12 @@ var SVG_DOC='<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke=
 var SVG_BUILDING='<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M9 22v-4h6v4"/><path d="M8 6h.01"/><path d="M16 6h.01"/><path d="M12 6h.01"/><path d="M12 10h.01"/><path d="M12 14h.01"/><path d="M16 10h.01"/><path d="M16 14h.01"/><path d="M8 10h.01"/><path d="M8 14h.01"/></svg>';
 var SVG_DOC_SM='<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>';
 
+function onImgErr(el,type){
+  if(type==='logo'){el.outerHTML='<div class="logo-placeholder">'+SVG_BUILDING+'</div>';}
+  else if(type==='top'){el.outerHTML='<div class="top-img-placeholder">'+SVG_DOC+'</div>';}
+  else{el.parentElement.innerHTML='<div class="no-img">'+SVG_DOC_SM+'</div>';}
+}
+
 /* Reaction SVGs */
 var SVG_R_LIKE=SVG_THUMBSUP;
 var SVG_R_CELEBRATE='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12s2-4 8-4 8 4 8 4-2 4-8 4-8-4-8-4Z"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/></svg>';
@@ -417,7 +423,7 @@ function render(d){
     bestPostHTML='<div class="top-post-section"><h3>'+SVG_TROPHY+' Best Performing Post</h3>';
     bestPostHTML+='<a href="'+(bestPost.permalink||'#')+'" target="_blank" class="top-post-card">';
     if(bsrc){
-      bestPostHTML+='<img class="top-img" src="'+esc(bsrc)+'" alt="" onerror="this.className=\'top-img-placeholder\';this.outerHTML=\'<div class=top-img-placeholder>'+SVG_DOC+'</div>\'">';
+      bestPostHTML+='<img class="top-img" src="'+esc(bsrc)+'" alt="" onerror="onImgErr(this,\'top\')">';
     }else{
       bestPostHTML+='<div class="top-img-placeholder">'+SVG_DOC+'</div>';
     }
@@ -453,7 +459,7 @@ function render(d){
     postsHTML+='<a class="post-card" href="'+(p.permalink||'#')+'" target="_blank" rel="noopener">';
     postsHTML+='<div class="post-img-wrap">';
     if(src){
-      postsHTML+='<img src="'+esc(src)+'" alt="" loading="lazy" onerror="this.parentElement.innerHTML=\'<div class=no-img>'+SVG_DOC_SM+'</div>\'">';
+      postsHTML+='<img src="'+esc(src)+'" alt="" loading="lazy" onerror="onImgErr(this,\'post\')">';
     }else{
       postsHTML+='<div class="no-img">'+SVG_DOC_SM+'</div>';
     }
@@ -477,7 +483,7 @@ function render(d){
   var logoSrc=a.logo_url||'';
   html+='<div class="profile-card">';
   if(logoSrc){
-    html+='<img src="'+esc(logoSrc)+'" alt="" onerror="this.outerHTML=\'<div class=logo-placeholder>'+SVG_BUILDING+'</div>\'">';
+    html+='<img src="'+esc(logoSrc)+'" alt="" onerror="onImgErr(this,\'logo\')">';
   }else{
     html+='<div class="logo-placeholder">'+SVG_BUILDING+'</div>';
   }

@@ -508,6 +508,12 @@ var SVG_CHART='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" strok
 var SVG_CLOCK='<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>';
 var SVG_CAMERA='<svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="5"/><circle cx="17.5" cy="6.5" r="1.5" fill="currentColor" stroke="none"/></svg>';
 
+function onImgErr(el,type){
+  if(type==='avatar'){el.outerHTML='<div class="avatar-placeholder">'+SVG_CAMERA+'</div>';}
+  else if(type==='top'){el.outerHTML='<div class="top-img-placeholder">'+SVG_IMG_PLACEHOLDER_LG+'</div>';}
+  else{el.parentElement.innerHTML='<div class="no-img">'+SVG_IMG_PLACEHOLDER+'</div>';}
+}
+
 function render(d){
   var a=d.account,insights=d.insights,posts=d.posts,cm=d.calculated_metrics,lastFetch=d.lastFetch,source=d.source;
 
@@ -556,7 +562,7 @@ function render(d){
     postsHTML+='<a class="post-card" href="'+(p.permalink||'#')+'" target="_blank" rel="noopener">';
     postsHTML+='<div class="post-img-wrap">';
     if(src){
-      postsHTML+='<img src="'+esc(src)+'" alt="" loading="lazy" onerror="this.parentElement.innerHTML=\'<div class=no-img>'+SVG_IMG_PLACEHOLDER.replace(/'/g,'\\&#39;')+'</div>\'">';
+      postsHTML+='<img src="'+esc(src)+'" alt="" loading="lazy" onerror="onImgErr(this,\'post\')">';
     }else{
       postsHTML+='<div class="no-img">'+SVG_IMG_PLACEHOLDER+'</div>';
     }
@@ -580,7 +586,7 @@ function render(d){
     bestPostHTML='<div class="top-post-section"><h3>'+SVG_TROPHY+' Best Performing Post</h3>';
     bestPostHTML+='<a href="'+(bestPost.permalink||'#')+'" target="_blank" class="top-post-card">';
     if(bsrc){
-      bestPostHTML+='<img class="top-img" src="'+esc(bsrc)+'" alt="" onerror="this.outerHTML=\'<div class=top-img-placeholder>'+SVG_IMG_PLACEHOLDER_LG.replace(/'/g,'\\&#39;')+'</div>\'">';
+      bestPostHTML+='<img class="top-img" src="'+esc(bsrc)+'" alt="" onerror="onImgErr(this,\'top\')">';
     }else{
       bestPostHTML+='<div class="top-img-placeholder">'+SVG_IMG_PLACEHOLDER_LG+'</div>';
     }
@@ -599,7 +605,7 @@ function render(d){
   var html='';
   html+='<div class="profile-card">';
   if(profSrc){
-    html+='<img src="'+esc(profSrc)+'" alt="" onerror="this.outerHTML=\'<div class=avatar-placeholder>'+SVG_CAMERA.replace(/'/g,'\\&#39;')+'</div>\'">';
+    html+='<img src="'+esc(profSrc)+'" alt="" onerror="onImgErr(this,\'avatar\')">';
   }else{
     html+='<div class="avatar-placeholder">'+SVG_CAMERA+'</div>';
   }
