@@ -55,4 +55,25 @@ async function loadAllSecrets() {
   console.log('[Secrets] All secrets loaded.');
 }
 
-module.exports = { getSecret, loadAllSecrets };
+async function updateSecret(name, value) {
+  // In development: just update the in-memory env var
+  if (process.env.NODE_ENV !== 'production') {
+    process.env[name] = value;
+    cache[name] = value;
+    return;
+  }
+  try {
+    await client.addSecretVersion({
+      parent: `projects/${PROJECT_ID}/secrets/${name}`,
+      payload: { data: Buffer.from(value, 'utf8') },
+    });
+    // Update in-memory cache so this process uses the new value immediately
+    cache[name] = value;
+    process.env[name] = value;
+    console.log(`[Secrets] Updated "${name}" in Secret Manager`);
+  } catch (err) {
+    console.error(`[Secrets] Failed to update "${name}":`, err.message);
+  }
+}
+
+module.exports = { getSecret, updateSecret, loadAllSecrets };

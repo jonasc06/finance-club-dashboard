@@ -1,6 +1,7 @@
 const axios  = require('axios');
 const config = require('../config');
 const { readJSON, writeJSON } = require('./cache');
+const { updateSecret } = require('../config/secrets');
 
 const BASE_URL = 'https://easyverein.com/api/v2.0';
 
@@ -50,8 +51,8 @@ async function refreshTokenIfNeeded() {
       timeout: 15000,
     });
     if (data.token) {
-      process.env.EASYVEREIN_SECRET = data.token;
-      console.log('[EasyVerein] Token refreshed successfully');
+      await updateSecret('EASYVEREIN_SECRET', data.token);
+      console.log('[EasyVerein] Token refreshed and saved to Secret Manager');
     }
   } catch (err) {
     if (err.response?.status !== 405) {
