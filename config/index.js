@@ -12,6 +12,7 @@ module.exports = {
   get DASHBOARD_PASSWORD() { return process.env.DASHBOARD_PASSWORD || 'ChangeMe123!'; },
   get SESSION_SECRET()     { return process.env.SESSION_SECRET || 'dev-secret-change-me'; },
   get CRON_SECRET()        { return process.env.CRON_SECRET || ''; },
+  get EASYVEREIN_TOKEN()   { return process.env.EASYVEREIN_SECRET || ''; },
 
   DATA_DIR:    path.join(BASE_DIR, 'data'),
   IG_IMAGES:   path.join(BASE_DIR, 'data', 'images', 'ig'),
@@ -20,6 +21,8 @@ module.exports = {
   IG_HISTORY_FILE: path.join(BASE_DIR, 'data', 'ig_history.json'),
   LI_CACHE_FILE:   path.join(BASE_DIR, 'data', 'li_cache.json'),
   LI_HISTORY_FILE: path.join(BASE_DIR, 'data', 'li_history.json'),
+  EV_CACHE_FILE:   path.join(BASE_DIR, 'data', 'ev_cache.json'),
+  EV_HISTORY_FILE: path.join(BASE_DIR, 'data', 'ev_history.json'),
 
   LEGACY_CACHE_FILE:   path.join(BASE_DIR, 'data', 'cache.json'),
   LEGACY_HISTORY_FILE: path.join(BASE_DIR, 'data', 'history.json'),

@@ -40,6 +40,7 @@ async function loadAllSecrets() {
     'LINKEDIN_COMPANY_URL',
     'INSTAGRAM_USERNAME',
     'CRON_SECRET',
+    'EASYVEREIN_SECRET',
   ];
 
   console.log('[Secrets] Loading secrets...');

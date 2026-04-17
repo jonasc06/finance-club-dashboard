@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>Finance Club Leipzig – EasyVerein Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Segoe UI',system-ui,sans-serif;background:#f0f2f5;color:#1a1a2e}
+    header{background:linear-gradient(135deg,#1a5632,#27ae60,#2ecc71);color:#fff;padding:18px 32px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
+    header h1{font-size:1.3rem}
+    .right{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+    #lastFetch{font-size:.8rem;opacity:.7}
+    .btn-back{padding:8px 16px;background:transparent;color:rgba(255,255,255,.85);border:1px solid rgba(255,255,255,.3);border-radius:8px;font-size:.8rem;text-decoration:none;transition:all .2s}
+    .btn-back:hover{background:rgba(255,255,255,.1)}
+    .btn-logout{padding:8px 16px;background:transparent;color:rgba(255,255,255,.6);border:1px solid rgba(255,255,255,.2);border-radius:8px;cursor:pointer;font-size:.8rem}
+    .source-badge{font-size:.7rem;background:rgba(255,255,255,.15);padding:3px 10px;border-radius:20px}
+    main{padding:32px;max-width:1280px;margin:0 auto}
+
+    .kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;margin-bottom:28px}
+    .kpi-card{background:#fff;border-radius:14px;padding:22px 18px;box-shadow:0 2px 12px rgba(0,0,0,.06);border-top:4px solid var(--accent,#27ae60);text-align:center}
+    .kpi-card .label{font-size:.75rem;text-transform:uppercase;letter-spacing:.06em;color:#888;margin-bottom:6px}
+    .kpi-card .value{font-size:2rem;font-weight:700;color:var(--accent,#27ae60)}
+    .kpi-card .sub{font-size:.75rem;color:#aaa;margin-top:4px}
+    .kpi-card .change{font-size:.75rem;margin-top:6px;font-weight:600}
+    .change.up{color:#27ae60}
+    .change.down{color:#e74c3c}
+    .change.flat{color:#999}
+
+    .section-title{font-size:1.1rem;font-weight:700;margin:28px 0 16px;color:#333}
+
+    .charts-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(420px,1fr));gap:24px;margin-bottom:32px}
+    .chart-card{background:#fff;border-radius:14px;padding:24px;box-shadow:0 2px 12px rgba(0,0,0,.06)}
+    .chart-card h3{font-size:1rem;margin-bottom:16px;color:#333}
+    .chart-card .na-msg{color:#bbb;font-size:.9rem;text-align:center;padding:40px 0}
+
+    .groups-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;margin-bottom:32px}
+    .group-card{background:#fff;border-radius:12px;padding:18px;box-shadow:0 2px 10px rgba(0,0,0,.06);display:flex;justify-content:space-between;align-items:center}
+    .group-card .gname{font-size:.9rem;font-weight:600;color:#333}
+    .group-card .gcount{font-size:1.4rem;font-weight:700;color:#27ae60}
+
+    .inventory-table{width:100%;border-collapse:collapse;background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,.06);margin-bottom:32px}
+    .inventory-table th{background:#f8f9fa;text-align:left;padding:12px 16px;font-size:.8rem;text-transform:uppercase;letter-spacing:.05em;color:#666;border-bottom:2px solid #e9ecef}
+    .inventory-table td{padding:12px 16px;font-size:.9rem;border-bottom:1px solid #f0f2f5}
+    .inventory-table tr:last-child td{border-bottom:none}
+    .stock-bar{height:8px;border-radius:4px;background:#e9ecef;position:relative;min-width:80px}
+    .stock-bar .fill{height:100%;border-radius:4px;background:#27ae60;transition:width .3s}
+    .stock-low .fill{background:#e74c3c}
+    .stock-mid .fill{background:#f39c12}
+
+    .loading{text-align:center;padding:80px;color:#888;font-size:1.1rem}
+    .err{background:#ffeaea;color:#c0392b;border-radius:10px;padding:16px;margin:20px 0}
+
+    @media(max-width:600px){
+      header{padding:14px 16px}
+      main{padding:16px}
+      .charts-grid{grid-template-columns:1fr}
+      .kpi-grid{grid-template-columns:repeat(2,1fr)}
+    }
+  </style>
+</head>
+<body>
+<header>
+  <div style="display:flex;align-items:center;gap:12px">
+    <a href="/" class="btn-back">&larr; Menu</a>
+    <h1>&#127970; EasyVerein Dashboard</h1>
+  </div>
+  <div class="right">
+    <span id="lastFetch">Loading...</span>
+    <span id="sourceBadge" class="source-badge"></span>
+    <form method="POST" action="/logout" style="margin:0">
+      <button class="btn-logout" type="submit">Logout</button>
+    </form>
+  </div>
+</header>
+<main id="app"><div class="loading">&#9203; Loading EasyVerein data...</div></main>
+<script>
+function fmt(n){if(n==null||n===0)return'\u2014';if(n>=1e6)return(n/1e6).toFixed(1)+'M';if(n>=1e3)return(n/1e3).toFixed(1)+'K';return String(n)}
+function eur(n){if(n==null)return'\u2014';return n.toLocaleString('de-DE',{style:'currency',currency:'EUR'})}
+function esc(s){var d=document.createElement('div');d.textContent=s;return d.innerHTML}
+
+function timeData(ins,name){
+  var m=(ins||[]).find(function(i){return i.name===name});
+  if(!m)return null;
+  var v=m.values||[];
+  if(v.length===0)return null;
+  return{
+    labels:v.map(function(x){return new Date(x.end_time).toLocaleDateString('de-DE',{day:'2-digit',month:'short'})}),
+    data:v.map(function(x){return x.value||0})
+  };
+}
+
+function makeChart(id,label,td,color,wholeNumbers){
+  var el=document.getElementById(id);if(!el)return;
+  if(!td){el.style.display='none';var p=document.createElement('div');p.className='na-msg';p.textContent='Not enough data yet \u2014 keep refreshing daily!';el.parentElement.appendChild(p);return;}
+  new Chart(el,{type:'line',data:{labels:td.labels,datasets:[{label:label,data:td.data,borderColor:color,backgroundColor:color+'22',fill:true,tension:.35,pointRadius:2,borderWidth:2}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{x:{grid:{display:false},ticks:{maxTicksLimit:10,font:{size:11}}},y:{beginAtZero:false,grid:{color:'#f5f5f5'},ticks:{font:{size:11},precision:wholeNumbers?0:undefined}}}}});
+}
+
+function makeBarChart(id,label,labels,data,color){
+  var el=document.getElementById(id);if(!el)return;
+  new Chart(el,{type:'bar',data:{labels:labels,datasets:[{label:label,data:data,backgroundColor:color+'88',borderColor:color,borderWidth:1,borderRadius:6}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{x:{grid:{display:false},ticks:{font:{size:10}}},y:{beginAtZero:true,grid:{color:'#f5f5f5'}}}}});
+}
+
+function makeDoubleBarChart(id,label1,label2,labels,data1,data2,color1,color2){
+  var el=document.getElementById(id);if(!el)return;
+  new Chart(el,{type:'bar',data:{labels:labels,datasets:[
+    {label:label1,data:data1,backgroundColor:color1+'88',borderColor:color1,borderWidth:1,borderRadius:6},
+    {label:label2,data:data2,backgroundColor:color2+'88',borderColor:color2,borderWidth:1,borderRadius:6}
+  ]},options:{responsive:true,plugins:{legend:{position:'top',labels:{font:{size:11}}}},scales:{x:{grid:{display:false},ticks:{font:{size:10}}},y:{beginAtZero:true,grid:{color:'#f5f5f5'}}}}});
+}
+
+function makePieChart(id,labels,data,colors){
+  var el=document.getElementById(id);if(!el)return;
+  if(!data||data.length===0||data.every(function(v){return v===0})){el.style.display='none';var p=document.createElement('div');p.className='na-msg';p.textContent='No data available.';el.parentElement.appendChild(p);return;}
+  new Chart(el,{type:'doughnut',data:{labels:labels,datasets:[{data:data,backgroundColor:colors,borderWidth:2,hoverOffset:6}]},options:{responsive:true,plugins:{legend:{position:'right',labels:{font:{size:12},padding:10}}}}});
+}
+
+function render(d){
+  var org=d.organization||{},members=d.members||{},inv=d.invoices||{},inventory=d.inventory||[],cm=d.calculated_metrics||{},insights=d.insights,lastFetch=d.lastFetch,source=d.source;
+
+  document.getElementById('lastFetch').textContent='Updated: '+new Date(lastFetch).toLocaleString('de-DE');
+  document.getElementById('sourceBadge').textContent=source==='easyverein-api'?'\uD83D\uDD17 EasyVerein API':'';
+
+  /* member change from history */
+  var mcData=timeData(insights,'total_members');
+  var memberChange='';
+  if(mcData&&mcData.data.length>=2){
+    var diff=mcData.data[mcData.data.length-1]-mcData.data[0];
+    var cls=diff>0?'up':diff<0?'down':'flat';
+    var sign=diff>0?'+':'';
+    memberChange='<div class="change '+cls+'">'+sign+diff+' since tracking started</div>';
+  }
+
+  var html='';
+
+  /* ── KPI Cards: Members ── */
+  html+='<div class="section-title">\uD83D\uDC65 Members</div>';
+  html+='<div class="kpi-grid">';
+  html+='<div class="kpi-card" style="--accent:#27ae60"><div class="label">Active Members</div><div class="value">'+fmt(members.total)+'</div><div class="sub">Total active</div>'+memberChange+'</div>';
+  html+='<div class="kpi-card" style="--accent:#3498db"><div class="label">New (30 days)</div><div class="value">'+fmt(members.new_last_30_days)+'</div><div class="sub">Joined recently</div></div>';
+  html+='<div class="kpi-card" style="--accent:#f39c12"><div class="label">Applications</div><div class="value">'+fmt(members.applications)+'</div><div class="sub">Pending</div></div>';
+  html+='<div class="kpi-card" style="--accent:#e74c3c"><div class="label">Resigned</div><div class="value">'+fmt(members.resigned)+'</div><div class="sub">All time</div></div>';
+  html+='</div>';
+
+  /* ── KPI Cards: Finances ── */
+  html+='<div class="section-title">\uD83D\uDCB0 Finances</div>';
+  html+='<div class="kpi-grid">';
+  html+='<div class="kpi-card" style="--accent:#27ae60"><div class="label">Total Revenue</div><div class="value">'+eur(inv.total_revenue)+'</div><div class="sub">From paid invoices</div></div>';
+  html+='<div class="kpi-card" style="--accent:#f39c12"><div class="label">Open Invoices</div><div class="value">'+fmt(inv.open_count)+'</div><div class="sub">'+eur(inv.open_amount)+'</div></div>';
+  html+='<div class="kpi-card" style="--accent:#e74c3c"><div class="label">Overdue</div><div class="value">'+fmt(inv.overdue_count)+'</div><div class="sub">'+eur(inv.overdue_amount)+'</div></div>';
+  html+='<div class="kpi-card" style="--accent:#3498db"><div class="label">Paid Invoices</div><div class="value">'+fmt(inv.paid_count)+'</div><div class="sub">Completed</div></div>';
+  html+='</div>';
+
+  /* ── Charts ── */
+  html+='<div class="charts-grid">';
+  html+='<div class="chart-card"><h3>\uD83D\uDC65 Member Count Over Time</h3><canvas id="cMembers"></canvas></div>';
+  html+='<div class="chart-card"><h3>\uD83D\uDCB5 Monthly Revenue</h3><canvas id="cRevenue"></canvas></div>';
+  html+='<div class="chart-card"><h3>\uD83D\uDCCA Income vs Expenses</h3><canvas id="cIncomeExpenses"></canvas></div>';
+  html+='<div class="chart-card"><h3>\uD83D\uDCC8 Open Invoices Over Time</h3><canvas id="cOpenInv"></canvas></div>';
+  html+='<div class="chart-card"><h3>\uD83C\uDFAF Invoice Status</h3><canvas id="cInvStatus"></canvas></div>';
+  html+='</div>';
+
+  /* ── Member Groups ── */
+  var groups=members.groups||[];
+  if(groups.length>0){
+    html+='<div class="section-title">\uD83D\uDCCB Member Groups</div>';
+    html+='<div class="groups-grid">';
+    groups.forEach(function(g){
+      html+='<div class="group-card"><span class="gname">'+esc(g.name)+'</span><span class="gcount">'+fmt(g.memberCount)+'</span></div>';
+    });
+    html+='</div>';
+  }
+
+  /* ── Inventory Table ── */
+  if(inventory.length>0){
+    html+='<div class="section-title">\uD83D\uDCE6 Inventory</div>';
+    html+='<table class="inventory-table"><thead><tr><th>Item</th><th>Current Stock</th><th>Total Stock</th><th>Availability</th></tr></thead><tbody>';
+    inventory.forEach(function(item){
+      var pct=item.totalStock>0?Math.round(item.currentStock/item.totalStock*100):0;
+      var cls=pct<25?'stock-low':pct<60?'stock-mid':'';
+      html+='<tr><td>'+esc(item.name)+'</td><td>'+fmt(item.currentStock)+'</td><td>'+fmt(item.totalStock)+'</td>';
+      html+='<td><div class="stock-bar '+cls+'"><div class="fill" style="width:'+pct+'%"></div></div></td></tr>';
+    });
+    html+='</tbody></table>';
+  }
+
+  document.getElementById('app').innerHTML=html;
+
+  /* ── Render Charts ── */
+  makeChart('cMembers','Members',mcData,'#27ae60',true);
+  makeChart('cOpenInv','Open Invoices',timeData(insights,'open_invoices'),'#e74c3c',true);
+
+  /* Monthly revenue bar */
+  var mr=inv.monthly_revenue||[];
+  if(mr.length>0){
+    makeBarChart('cRevenue','Revenue',mr.map(function(m){return m.label}),mr.map(function(m){return m.value}),'#27ae60');
+  }
+
+  /* Income vs Expenses */
+  var mi=inv.monthly_income||[];
+  var me=inv.monthly_expenses||[];
+  if(mi.length>0){
+    makeDoubleBarChart('cIncomeExpenses','Income','Expenses',
+      mi.map(function(m){return m.label}),
+      mi.map(function(m){return m.value}),
+      me.map(function(m){return m.value}),
+      '#27ae60','#e74c3c');
+  }
+
+  /* Invoice status pie */
+  var invLabels=['Paid','Open','Overdue'];
+  var invData=[inv.paid_count||0,Math.max(0,(inv.open_count||0)-(inv.overdue_count||0)),inv.overdue_count||0];
+  makePieChart('cInvStatus',invLabels,invData,['#27ae60','#f39c12','#e74c3c']);
+}
+
+async function loadData(){
+  try{var r=await fetch('/api/easyverein/kpis');if(!r.ok)throw new Error('HTTP '+r.status);render(await r.json())}
+  catch(e){document.getElementById('app').innerHTML='<div class="err">\u274C '+e.message+'</div>'}
+}
+
+loadData();
+</script>
+</body>
+</html>

@@ -16,4 +16,8 @@ router.get('/linkedin', requireAuth, (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'linkedin.html'));
 });
 
+router.get('/easyverein', requireAuth, (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'easyverein.html'));
+});
+
 module.exports = router;

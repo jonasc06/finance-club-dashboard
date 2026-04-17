@@ -14,7 +14,7 @@
     .logo{font-size:3rem;margin-bottom:8px}
     .title{font-size:1.6rem;font-weight:700;margin-bottom:4px}
     .subtitle{font-size:.95rem;opacity:.7;margin-bottom:48px}
-    .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:24px;width:100%;max-width:720px}
+    .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:24px;width:100%;max-width:1080px}
     .platform-card{background:rgba(255,255,255,.08);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.12);border-radius:16px;padding:32px 28px;text-decoration:none;color:#fff;transition:all .25s;cursor:pointer;display:flex;flex-direction:column;gap:16px}
     .platform-card:hover{background:rgba(255,255,255,.15);transform:translateY(-4px);box-shadow:0 12px 40px rgba(0,0,0,.3)}
     .platform-header{display:flex;align-items:center;gap:14px}
@@ -68,33 +68,56 @@
       <div class="view-link">View Dashboard →</div>
     </a>
 
+    <a href="/easyverein" class="platform-card" id="evCard">
+      <div class="platform-header">
+        <span class="platform-icon">🏢</span>
+        <span class="platform-name">EasyVerein</span>
+        <span class="platform-tag">Members & Finance</span>
+      </div>
+      <div id="evKpis" class="loading-mini">Loading...</div>
+      <div class="view-link">View Dashboard →</div>
+    </a>
+
   </div>
 </main>
 <script>
 function fmt(n){if(n==null||n===0)return'\u2014';if(n>=1e6)return(n/1e6).toFixed(1)+'M';if(n>=1e3)return(n/1e3).toFixed(1)+'K';return String(n)}
 function pct(n){return n!=null?n.toFixed(2)+'%':'\u2014'}
 
+function eur(n){if(n==null)return'\u2014';return n.toLocaleString('de-DE',{style:'currency',currency:'EUR'})}
+
 function renderCard(el,data,type){
   var a=data.account||{};
   var cm=data.calculated_metrics||{};
-  var followers,engRate,posts,lastFetch=data.lastFetch;
+  var lastFetch=data.lastFetch;
 
-  if(type==='ig'){
-    followers=a.followers_count||0;
-    engRate=cm.engagement_rate||0;
-    posts=a.media_count||0;
-  }else{
-    followers=a.followers_count||0;
-    engRate=cm.engagement_rate||0;
-    posts=cm.posts_scraped||0;
+  if(type==='ev'){
+    var m=data.members||{};
+    var inv=data.invoices||{};
+    el.innerHTML=
+      '<div class="kpi-row">'+
+      '<div class="mini-kpi"><div class="val">'+fmt(cm.active_members||m.total)+'</div><div class="lbl">Members</div></div>'+
+      '<div class="mini-kpi"><div class="val">'+eur(cm.total_revenue||inv.total_revenue)+'</div><div class="lbl">Revenue</div></div>'+
+      '<div class="mini-kpi"><div class="val">'+fmt(cm.open_invoices||inv.open_count)+'</div><div class="lbl">Open Inv.</div></div>'+
+      '</div>';
+  } else {
+    var followers,engRate,posts;
+    if(type==='ig'){
+      followers=a.followers_count||0;
+      engRate=cm.engagement_rate||0;
+      posts=a.media_count||0;
+    }else{
+      followers=a.followers_count||0;
+      engRate=cm.engagement_rate||0;
+      posts=cm.posts_scraped||0;
+    }
+    el.innerHTML=
+      '<div class="kpi-row">'+
+      '<div class="mini-kpi"><div class="val">'+fmt(followers)+'</div><div class="lbl">Followers</div></div>'+
+      '<div class="mini-kpi"><div class="val">'+pct(engRate)+'</div><div class="lbl">Eng. Rate</div></div>'+
+      '<div class="mini-kpi"><div class="val">'+fmt(posts)+'</div><div class="lbl">Posts</div></div>'+
+      '</div>';
   }
-
-  el.innerHTML=
-    '<div class="kpi-row">'+
-    '<div class="mini-kpi"><div class="val">'+fmt(followers)+'</div><div class="lbl">Followers</div></div>'+
-    '<div class="mini-kpi"><div class="val">'+pct(engRate)+'</div><div class="lbl">Eng. Rate</div></div>'+
-    '<div class="mini-kpi"><div class="val">'+fmt(posts)+'</div><div class="lbl">Posts</div></div>'+
-    '</div>';
 
   /* Add footer after the kpi row */
   var footer=document.createElement('div');
@@ -116,6 +139,7 @@ async function loadCard(url,elId,type){
 
 loadCard('/api/kpis','igKpis','ig');
 loadCard('/api/linkedin/kpis','liKpis','li');
+loadCard('/api/easyverein/kpis','evKpis','ev');
 </script>
 </body>
 </html>

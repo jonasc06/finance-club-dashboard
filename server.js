@@ -14,6 +14,7 @@ async function start() {
   const { streamImage } = require('./services/storage');
   const ig = require('./services/instagram');
   const li = require('./services/linkedin');
+  const ev = require('./services/easyverein');
 
   const app = express();
   const IS_PRODUCTION = process.env.NODE_ENV === 'production';
@@ -33,6 +34,7 @@ async function start() {
   app.use(require('./routes/cron'));
   app.use(require('./routes/instagram'));
   app.use(require('./routes/linkedin'));
+  app.use(require('./routes/easyverein'));
   app.use(require('./routes/pages'));
 
   // ── Image route (serves from GCS in prod, disk locally) ──
@@ -76,12 +78,16 @@ async function start() {
     // Load cached data from GCS — no scraping on startup
     await ig.loadCacheFromDisk();
     await li.loadCacheFromDisk();
+    await ev.loadCacheFromDisk();
 
     if (!ig.getCache().lastFetch) {
       console.log('[Startup] No IG cache yet — will be populated on next cron run');
     }
     if (!li.getCache().lastFetch) {
       console.log('[Startup] No LI cache yet — will be populated on next cron run');
+    }
+    if (!ev.getCache().lastFetch) {
+      console.log('[Startup] No EV cache yet — will be populated on next cron run');
     }
   });
 }

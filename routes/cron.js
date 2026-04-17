@@ -2,6 +2,7 @@ const express = require('express');
 const { verifyCron } = require('../middleware/auth');
 const ig = require('../services/instagram');
 const li = require('../services/linkedin');
+const ev = require('../services/easyverein');
 
 const router = express.Router();
 
@@ -39,6 +40,14 @@ router.post('/api/cron/refresh-all', verifyCron, async (req, res) => {
     results.linkedin = { ok: true, skipped: true, reason: 'last fetch too recent' };
   }
 
+  // EasyVerein
+  const evCache = ev.getCache();
+  if (shouldRunBiDaily(evCache.lastFetch)) {
+    results.easyverein = await ev.refreshCache();
+  } else {
+    results.easyverein = { ok: true, skipped: true, reason: 'last fetch too recent' };
+  }
+
   console.log('[Cron] Bi-daily refresh complete:', JSON.stringify(results));
   res.json({ ok: true, type: 'bi-daily', results });
 });
@@ -52,8 +61,9 @@ router.post('/api/cron/refresh-full', verifyCron, async (req, res) => {
   console.log('[Cron] Monthly full refresh triggered');
   const results = {};
 
-  results.instagram = await ig.refreshCache({ fullImageRescrape: true });
-  results.linkedin  = await li.refreshCache({ fullImageRescrape: true });
+  results.instagram  = await ig.refreshCache({ fullImageRescrape: true });
+  results.linkedin   = await li.refreshCache({ fullImageRescrape: true });
+  results.easyverein = await ev.refreshCache();
 
   console.log('[Cron] Monthly full refresh complete:', JSON.stringify(results));
   res.json({ ok: true, type: 'monthly-full', results });
