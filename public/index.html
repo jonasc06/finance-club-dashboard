@@ -3,79 +3,106 @@
 <head>
   <meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
   <title>Finance Club Leipzig – KPI Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=JetBrains+Mono:wght@400;500&family=Nunito+Sans:opsz,wght@6..12,400;6..12,500;6..12,600&display=swap" rel="stylesheet"/>
   <style>
     *{box-sizing:border-box;margin:0;padding:0}
-    body{font-family:'Segoe UI',system-ui,sans-serif;background:linear-gradient(135deg,#0f2027,#203a43,#2c5364);min-height:100vh;display:flex;flex-direction:column;color:#fff}
-    header{padding:18px 32px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
-    header h1{font-size:1.3rem}
-    .btn-logout{padding:8px 16px;background:transparent;color:rgba(255,255,255,.6);border:1px solid rgba(255,255,255,.2);border-radius:8px;cursor:pointer;font-size:.8rem}
-    .btn-logout:hover{background:rgba(255,255,255,.08)}
-    main{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 20px}
-    .logo{font-size:3rem;margin-bottom:8px}
-    .title{font-size:1.6rem;font-weight:700;margin-bottom:4px}
-    .subtitle{font-size:.95rem;opacity:.7;margin-bottom:48px}
-    .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:24px;width:100%;max-width:1080px}
-    .platform-card{background:rgba(255,255,255,.08);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.12);border-radius:16px;padding:32px 28px;text-decoration:none;color:#fff;transition:all .25s;cursor:pointer;display:flex;flex-direction:column;gap:16px}
-    .platform-card:hover{background:rgba(255,255,255,.15);transform:translateY(-4px);box-shadow:0 12px 40px rgba(0,0,0,.3)}
+    :root{--bg:#080b12;--surface:#111827;--surface-2:#1e293b;--border:rgba(148,163,184,.08);--border-2:rgba(148,163,184,.12);--text:#f1f5f9;--text-2:#94a3b8;--text-3:#64748b;--emerald:#10b981;--emerald-dim:rgba(16,185,129,.12);--blue:#38bdf8;--blue-dim:rgba(56,189,248,.1);--amber:#fbbf24;--amber-dim:rgba(251,191,36,.1)}
+    body{font-family:'Nunito Sans',sans-serif;background:var(--bg);min-height:100vh;color:var(--text)}
+    body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse 80% 50% at 50% -10%,rgba(16,185,129,.05),transparent 60%);pointer-events:none}
+    .grid-bg{position:fixed;inset:0;background-image:linear-gradient(var(--border) 1px,transparent 1px),linear-gradient(90deg,var(--border) 1px,transparent 1px);background-size:64px 64px;pointer-events:none;opacity:.5}
+    header{position:relative;padding:20px 32px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border)}
+    .header-left{display:flex;align-items:center;gap:12px}
+    .header-left svg{color:var(--emerald)}
+    header h1{font-family:'Syne',sans-serif;font-size:1.15rem;font-weight:700;letter-spacing:-.01em}
+    .btn-logout{padding:8px 18px;background:transparent;color:var(--text-3);border:1px solid var(--border-2);border-radius:8px;cursor:pointer;font-size:.8rem;font-family:'Nunito Sans',sans-serif;transition:all .2s}
+    .btn-logout:hover{color:var(--text-2);border-color:rgba(148,163,184,.2);background:rgba(148,163,184,.04)}
+    main{display:flex;flex-direction:column;align-items:center;padding:80px 24px 60px}
+    .hero-icon{width:64px;height:64px;border-radius:18px;background:var(--emerald-dim);display:flex;align-items:center;justify-content:center;margin-bottom:20px;color:var(--emerald);animation:fadeUp .5s ease both}
+    .hero-title{font-family:'Syne',sans-serif;font-size:2rem;font-weight:800;letter-spacing:-.03em;margin-bottom:6px;animation:fadeUp .5s ease .08s both}
+    .hero-sub{color:var(--text-3);font-size:.95rem;margin-bottom:56px;animation:fadeUp .5s ease .14s both}
+    @keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+    .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:20px;width:100%;max-width:1100px}
+    .platform-card{position:relative;background:var(--surface);border:1px solid var(--border-2);border-radius:16px;padding:28px 26px 24px;text-decoration:none;color:var(--text);transition:all .3s cubic-bezier(.4,0,.2,1);cursor:pointer;display:flex;flex-direction:column;gap:20px;overflow:hidden}
+    .platform-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--card-accent);opacity:0;transition:opacity .3s}
+    .platform-card:hover{border-color:rgba(148,163,184,.18);transform:translateY(-4px);box-shadow:0 16px 48px rgba(0,0,0,.4)}
+    .platform-card:hover::before{opacity:1}
+    .card-0{animation:fadeUp .5s ease .2s both}
+    .card-1{animation:fadeUp .5s ease .3s both}
+    .card-2{animation:fadeUp .5s ease .4s both}
     .platform-header{display:flex;align-items:center;gap:14px}
-    .platform-icon{font-size:2.2rem}
-    .platform-name{font-size:1.2rem;font-weight:700}
-    .platform-tag{font-size:.7rem;background:rgba(255,255,255,.15);padding:3px 10px;border-radius:20px;margin-left:auto}
+    .platform-icon{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center}
+    .platform-name{font-family:'Syne',sans-serif;font-size:1.15rem;font-weight:700}
+    .platform-tag{font-size:.68rem;font-weight:600;padding:4px 10px;border-radius:20px;margin-left:auto;letter-spacing:.03em;text-transform:uppercase}
     .kpi-row{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
-    .mini-kpi{text-align:center}
-    .mini-kpi .val{font-size:1.4rem;font-weight:700}
-    .mini-kpi .lbl{font-size:.7rem;text-transform:uppercase;letter-spacing:.05em;opacity:.6;margin-top:2px}
-    .platform-footer{font-size:.75rem;opacity:.5;margin-top:4px}
-    .view-link{font-size:.85rem;font-weight:600;opacity:.8;display:flex;align-items:center;gap:6px;margin-top:4px}
-    .view-link:hover{opacity:1}
-    .loading-mini{font-size:.85rem;opacity:.5;text-align:center;padding:12px 0}
+    .mini-kpi{text-align:center;padding:10px 4px;background:rgba(148,163,184,.04);border-radius:10px}
+    .mini-kpi .val{font-family:'JetBrains Mono',monospace;font-size:1.2rem;font-weight:500;color:var(--text)}
+    .mini-kpi .lbl{font-size:.65rem;text-transform:uppercase;letter-spacing:.06em;color:var(--text-3);margin-top:3px;font-weight:500}
+    .platform-footer{font-size:.72rem;color:var(--text-3);display:flex;align-items:center;gap:6px}
+    .platform-footer svg{width:12px;height:12px;opacity:.5}
+    .view-link{font-family:'Syne',sans-serif;font-size:.82rem;font-weight:600;color:var(--text-2);display:flex;align-items:center;gap:8px;margin-top:auto}
+    .view-link svg{transition:transform .2s}
+    .platform-card:hover .view-link svg{transform:translateX(3px)}
+    .loading-mini{font-size:.82rem;color:var(--text-3);text-align:center;padding:14px 0}
     @media(max-width:600px){
-      main{padding:24px 16px}
+      main{padding:40px 16px 40px}
       .cards{grid-template-columns:1fr}
+      .hero-title{font-size:1.6rem}
     }
   </style>
 </head>
 <body>
+<div class="grid-bg"></div>
 <header>
-  <h1>📊 Finance Club Leipzig — KPI Dashboard</h1>
+  <div class="header-left">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
+    <h1>Finance Club Leipzig</h1>
+  </div>
   <form method="POST" action="/logout" style="margin:0">
     <button class="btn-logout" type="submit">Logout</button>
   </form>
 </header>
 <main>
-  <div class="logo">📊</div>
-  <div class="title">KPI Dashboard</div>
-  <div class="subtitle">Select a platform to view detailed analytics</div>
+  <div class="hero-icon">
+    <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
+  </div>
+  <div class="hero-title">KPI Dashboard</div>
+  <div class="hero-sub">Select a platform to view detailed analytics</div>
   <div class="cards">
 
-    <a href="/instagram" class="platform-card" id="igCard">
+    <a href="/instagram" class="platform-card card-0" style="--card-accent:linear-gradient(90deg,#E1306C,#F77737)">
       <div class="platform-header">
-        <span class="platform-icon">📸</span>
+        <div class="platform-icon" style="background:rgba(225,48,108,.1);color:#E1306C">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="5"/><circle cx="17.5" cy="6.5" r="1.5" fill="currentColor" stroke="none"/></svg>
+        </div>
         <span class="platform-name">Instagram</span>
-        <span class="platform-tag">Social</span>
+        <span class="platform-tag" style="background:rgba(225,48,108,.1);color:#E1306C">Social</span>
       </div>
       <div id="igKpis" class="loading-mini">Loading...</div>
-      <div class="view-link">View Dashboard →</div>
+      <div class="view-link">View Dashboard <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></div>
     </a>
 
-    <a href="/linkedin" class="platform-card" id="liCard">
+    <a href="/linkedin" class="platform-card card-1" style="--card-accent:#0a66c2">
       <div class="platform-header">
-        <span class="platform-icon">💼</span>
+        <div class="platform-icon" style="background:rgba(10,102,194,.1);color:#0a66c2">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-4 0v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg>
+        </div>
         <span class="platform-name">LinkedIn</span>
-        <span class="platform-tag">Professional</span>
+        <span class="platform-tag" style="background:rgba(10,102,194,.1);color:#0a66c2">Professional</span>
       </div>
       <div id="liKpis" class="loading-mini">Loading...</div>
-      <div class="view-link">View Dashboard →</div>
+      <div class="view-link">View Dashboard <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></div>
     </a>
 
-    <a href="/easyverein" class="platform-card" id="evCard">
+    <a href="/easyverein" class="platform-card card-2" style="--card-accent:var(--emerald)">
       <div class="platform-header">
-        <span class="platform-icon">🏢</span>
+        <div class="platform-icon" style="background:var(--emerald-dim);color:var(--emerald)">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        </div>
         <span class="platform-name">EasyVerein</span>
-        <span class="platform-tag">Members & Finance</span>
+        <span class="platform-tag" style="background:var(--emerald-dim);color:var(--emerald)">Members & Finance</span>
       </div>
       <div id="evKpis" class="loading-mini">Loading...</div>
-      <div class="view-link">View Dashboard →</div>
+      <div class="view-link">View Dashboard <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></div>
     </a>
 
   </div>
@@ -83,7 +110,6 @@
 <script>
 function fmt(n){if(n==null||n===0)return'\u2014';if(n>=1e6)return(n/1e6).toFixed(1)+'M';if(n>=1e3)return(n/1e3).toFixed(1)+'K';return String(n)}
 function pct(n){return n!=null?n.toFixed(2)+'%':'\u2014'}
-
 function eur(n){if(n==null)return'\u2014';return n.toLocaleString('de-DE',{style:'currency',currency:'EUR'})}
 
 function renderCard(el,data,type){
@@ -119,10 +145,9 @@ function renderCard(el,data,type){
       '</div>';
   }
 
-  /* Add footer after the kpi row */
   var footer=document.createElement('div');
   footer.className='platform-footer';
-  footer.textContent='Last updated: '+(lastFetch?new Date(lastFetch).toLocaleDateString('de-DE',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}):'never');
+  footer.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> '+(lastFetch?new Date(lastFetch).toLocaleDateString('de-DE',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}):'never');
   el.after(footer);
 }
 
@@ -133,7 +158,7 @@ async function loadCard(url,elId,type){
     var d=await r.json();
     renderCard(document.getElementById(elId),d,type);
   }catch(e){
-    document.getElementById(elId).innerHTML='<span style="opacity:.5">No data yet</span>';
+    document.getElementById(elId).innerHTML='<span style="color:var(--text-3)">No data yet</span>';
   }
 }
 

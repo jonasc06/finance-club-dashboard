@@ -3,75 +3,250 @@
 <head>
   <meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
   <title>Finance Club Leipzig – LinkedIn Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=JetBrains+Mono:wght@400;500&family=Nunito+Sans:opsz,wght@6..12,400;6..12,500;6..12,600&display=swap" rel="stylesheet"/>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
   <style>
+    :root{--bg:#080b12;--surface:#111827;--surface-2:#1e293b;--border:rgba(148,163,184,.08);--border-2:rgba(148,163,184,.12);--text:#f1f5f9;--text-2:#94a3b8;--text-3:#64748b;--emerald:#10b981;--emerald-dim:rgba(16,185,129,.12);--linkedin:#0a66c2}
+
     *{box-sizing:border-box;margin:0;padding:0}
-    body{font-family:'Segoe UI',system-ui,sans-serif;background:#f0f2f5;color:#1a1a2e}
-    header{background:linear-gradient(135deg,#003049,#0a66c2,#0077b5);color:#fff;padding:18px 32px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
-    header h1{font-size:1.3rem}
+
+    body{
+      font-family:'Nunito Sans',system-ui,sans-serif;
+      background:var(--bg);
+      color:var(--text);
+      background-image:
+        linear-gradient(var(--border) 1px,transparent 1px),
+        linear-gradient(90deg,var(--border) 1px,transparent 1px),
+        radial-gradient(ellipse 60% 40% at 50% 0%,rgba(10,102,194,.10),transparent);
+      background-size:64px 64px,64px 64px,100% 100%;
+      min-height:100vh;
+    }
+
+    header{
+      background:var(--surface);
+      border-bottom:1px solid var(--border-2);
+      color:var(--text);
+      padding:18px 32px;
+      display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;
+    }
+    header h1{
+      font-family:'Syne',sans-serif;font-weight:700;font-size:1.3rem;
+      display:flex;align-items:center;gap:8px;
+    }
+    header h1 svg{color:var(--linkedin)}
     .right{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
-    #lastFetch{font-size:.8rem;opacity:.7}
-    .btn-back{padding:8px 16px;background:transparent;color:rgba(255,255,255,.85);border:1px solid rgba(255,255,255,.3);border-radius:8px;font-size:.8rem;text-decoration:none;transition:all .2s}
-    .btn-back:hover{background:rgba(255,255,255,.1)}
-    .btn-logout{padding:8px 16px;background:transparent;color:rgba(255,255,255,.6);border:1px solid rgba(255,255,255,.2);border-radius:8px;cursor:pointer;font-size:.8rem}
-    .source-badge{font-size:.7rem;background:rgba(255,255,255,.15);padding:3px 10px;border-radius:20px}
+    #lastFetch{font-size:.8rem;color:var(--text-3)}
+    .btn-back{
+      padding:8px 16px;background:transparent;color:var(--text-2);
+      border:1px solid var(--border-2);border-radius:8px;font-size:.8rem;
+      text-decoration:none;transition:all .2s;
+      display:inline-flex;align-items:center;gap:6px;
+      font-family:'Nunito Sans',sans-serif;
+    }
+    .btn-back:hover{background:var(--surface-2);color:var(--text)}
+    .btn-logout{
+      padding:8px 16px;background:transparent;color:var(--text-3);
+      border:1px solid var(--border-2);border-radius:8px;cursor:pointer;font-size:.8rem;
+      font-family:'Nunito Sans',sans-serif;transition:all .2s;
+    }
+    .btn-logout:hover{background:var(--surface-2);color:var(--text-2)}
+    .source-badge{font-size:.7rem;background:var(--surface-2);color:var(--text-2);padding:3px 10px;border-radius:20px;border:1px solid var(--border-2)}
+
     main{padding:32px;max-width:1280px;margin:0 auto}
 
-    .profile-card{background:#fff;border-radius:14px;padding:24px 28px;display:flex;align-items:center;gap:20px;margin-bottom:28px;box-shadow:0 2px 12px rgba(0,0,0,.06)}
-    .profile-card img{width:72px;height:72px;border-radius:50%;object-fit:cover;border:3px solid #0a66c2}
-    .profile-card .info h2{font-size:1.2rem}
-    .profile-card .info .tagline{color:#0a66c2;font-size:.85rem;font-weight:600;margin-top:2px}
-    .profile-card .info p{color:#666;font-size:.9rem;margin-top:4px;white-space:pre-line}
-    .profile-card .info a{color:#0a66c2}
+    /* ── Profile Card ── */
+    .profile-card{
+      background:var(--surface);border:1px solid var(--border-2);
+      border-radius:16px;padding:24px 28px;display:flex;align-items:center;gap:20px;
+      margin-bottom:28px;box-shadow:0 2px 12px rgba(0,0,0,.2);
+      animation:fadeUp .5s ease both;
+    }
+    .profile-card img{width:72px;height:72px;border-radius:50%;object-fit:cover;border:3px solid var(--linkedin)}
+    .profile-card .logo-placeholder{
+      width:72px;height:72px;border-radius:50%;
+      background:var(--surface-2);border:3px solid var(--linkedin);
+      display:flex;align-items:center;justify-content:center;color:var(--text-3);
+    }
+    .profile-card .info h2{font-family:'Syne',sans-serif;font-weight:700;font-size:1.2rem;color:var(--text)}
+    .profile-card .info .tagline{color:var(--linkedin);font-size:.85rem;font-weight:600;margin-top:2px}
+    .profile-card .info p{color:var(--text-2);font-size:.9rem;margin-top:4px;white-space:pre-line}
+    .profile-card .info a{color:var(--linkedin)}
 
+    /* ── KPI Grid ── */
     .kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;margin-bottom:28px}
-    .kpi-card{background:#fff;border-radius:14px;padding:22px 18px;box-shadow:0 2px 12px rgba(0,0,0,.06);border-top:4px solid var(--accent,#0a66c2);text-align:center}
-    .kpi-card .label{font-size:.75rem;text-transform:uppercase;letter-spacing:.06em;color:#888;margin-bottom:6px}
-    .kpi-card .value{font-size:2rem;font-weight:700;color:var(--accent,#0a66c2)}
-    .kpi-card .sub{font-size:.75rem;color:#aaa;margin-top:4px}
-    .kpi-card .change{font-size:.75rem;margin-top:6px;font-weight:600}
-    .change.up{color:#27ae60}
-    .change.down{color:#e74c3c}
-    .change.flat{color:#999}
+    .kpi-card{
+      background:var(--surface);border:1px solid var(--border-2);
+      border-radius:16px;padding:22px 18px;
+      box-shadow:0 2px 12px rgba(0,0,0,.2);
+      text-align:center;position:relative;overflow:hidden;
+    }
+    .kpi-card::before{
+      content:'';position:absolute;top:0;left:0;right:0;height:3px;
+      background:var(--accent,var(--linkedin));
+    }
+    .kpi-card .icon{margin-bottom:8px;color:var(--accent,var(--linkedin));opacity:.7}
+    .kpi-card .label{font-size:.65rem;text-transform:uppercase;letter-spacing:.08em;color:var(--text-3);margin-bottom:6px;font-weight:600}
+    .kpi-card .value{font-family:'JetBrains Mono',monospace;font-size:2rem;font-weight:500;color:var(--accent,var(--linkedin))}
+    .kpi-card .sub{font-size:.7rem;color:var(--text-3);margin-top:4px}
+    .kpi-card .change{font-size:.75rem;margin-top:6px;font-weight:600;font-family:'JetBrains Mono',monospace}
+    .change.up{color:var(--emerald)}
+    .change.down{color:#ef4444}
+    .change.flat{color:var(--text-3)}
 
+    /* ── Charts ── */
     .charts-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(420px,1fr));gap:24px;margin-bottom:32px}
-    .chart-card{background:#fff;border-radius:14px;padding:24px;box-shadow:0 2px 12px rgba(0,0,0,.06)}
-    .chart-card h3{font-size:1rem;margin-bottom:16px;color:#333}
-    .chart-card .na-msg{color:#bbb;font-size:.9rem;text-align:center;padding:40px 0}
+    .chart-card{
+      background:var(--surface);border:1px solid var(--border-2);
+      border-radius:16px;padding:24px;
+      box-shadow:0 2px 12px rgba(0,0,0,.2);
+    }
+    .chart-card h3{
+      font-family:'Syne',sans-serif;font-weight:700;
+      font-size:1rem;margin-bottom:16px;color:var(--text);
+      display:flex;align-items:center;gap:8px;
+    }
+    .chart-card h3 svg{color:var(--linkedin);opacity:.7}
+    .chart-card .na-msg{color:var(--text-3);font-size:.9rem;text-align:center;padding:40px 0}
 
+    /* ── Top Post ── */
     .top-post-section{margin-bottom:32px}
-    .top-post-section h3{font-size:1.1rem;margin-bottom:16px;color:#333}
-    .top-post-card{background:linear-gradient(135deg,#003049,#0a66c2,#0077b5);border-radius:14px;padding:24px;color:#fff;display:flex;gap:20px;align-items:center;flex-wrap:wrap;text-decoration:none}
+    .top-post-section h3{
+      font-family:'Syne',sans-serif;font-weight:700;
+      font-size:1.1rem;margin-bottom:16px;color:var(--text);
+      display:flex;align-items:center;gap:8px;
+    }
+    .top-post-section h3 svg{color:#f59e0b}
+    .top-post-card{
+      background:linear-gradient(135deg,#0a2540,#0a66c2 60%,#0077b5);
+      border:1px solid rgba(10,102,194,.3);
+      border-radius:16px;padding:24px;color:#fff;
+      display:flex;gap:20px;align-items:center;flex-wrap:wrap;text-decoration:none;
+      box-shadow:0 4px 24px rgba(10,102,194,.15);
+      transition:transform .2s,box-shadow .2s;
+    }
+    .top-post-card:hover{transform:translateY(-2px);box-shadow:0 8px 32px rgba(10,102,194,.25)}
     .top-post-card .top-img{width:160px;height:160px;border-radius:12px;object-fit:cover;flex-shrink:0;display:block}
-    .top-post-card .top-img-placeholder{width:160px;height:160px;border-radius:12px;background:rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;font-size:3rem;flex-shrink:0}
+    .top-post-card .top-img-placeholder{
+      width:160px;height:160px;border-radius:12px;
+      background:rgba(255,255,255,.08);
+      display:flex;align-items:center;justify-content:center;flex-shrink:0;
+      color:rgba(255,255,255,.3);
+    }
     .top-post-card .top-info{flex:1;min-width:200px}
-    .top-post-card .top-info h4{font-size:1rem;margin-bottom:8px;opacity:.8}
-    .top-post-card .top-info .top-caption{font-size:.9rem;opacity:.9;margin-bottom:12px;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
-    .top-post-card .top-stats{display:flex;gap:16px;flex-wrap:wrap}
-    .top-post-card .top-stats span{font-size:.9rem;background:rgba(255,255,255,.15);padding:4px 12px;border-radius:20px}
+    .top-post-card .top-info h4{font-size:.75rem;margin-bottom:8px;opacity:.6;text-transform:uppercase;letter-spacing:.06em;font-family:'Nunito Sans',sans-serif}
+    .top-post-card .top-info .top-caption{font-size:.9rem;opacity:.9;margin-bottom:12px;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;line-height:1.5}
+    .top-post-card .top-stats{display:flex;gap:10px;flex-wrap:wrap}
+    .top-post-card .top-stats span{
+      font-size:.8rem;background:rgba(255,255,255,.12);padding:5px 14px;border-radius:20px;
+      display:inline-flex;align-items:center;gap:5px;
+      font-family:'JetBrains Mono',monospace;font-weight:400;
+      backdrop-filter:blur(4px);
+    }
     .reaction-pills{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
-    .reaction-pills .pill{font-size:.75rem;background:rgba(255,255,255,.12);padding:3px 10px;border-radius:14px}
+    .reaction-pills .pill{
+      font-size:.72rem;padding:4px 12px;border-radius:14px;
+      display:inline-flex;align-items:center;gap:4px;
+      font-family:'JetBrains Mono',monospace;font-weight:400;
+      backdrop-filter:blur(4px);
+    }
+    .reaction-pills .pill.pill-like{background:rgba(10,102,194,.25);color:#7bb8eb}
+    .reaction-pills .pill.pill-celebrate{background:rgba(225,103,69,.2);color:#e8977e}
+    .reaction-pills .pill.pill-support{background:rgba(127,193,94,.2);color:#a5d88e}
+    .reaction-pills .pill.pill-love{background:rgba(239,68,68,.2);color:#f58a8a}
+    .reaction-pills .pill.pill-insightful{background:rgba(245,199,93,.2);color:#f5d87e}
+    .reaction-pills .pill.pill-funny{background:rgba(68,190,199,.2);color:#7ed4db}
 
-    .posts-section h3{font-size:1.1rem;margin-bottom:16px;color:#333}
+    /* ── Recent Posts ── */
+    .posts-section h3{
+      font-family:'Syne',sans-serif;font-weight:700;
+      font-size:1.1rem;margin-bottom:16px;color:var(--text);
+      display:flex;align-items:center;gap:8px;
+    }
+    .posts-section h3 svg{color:var(--linkedin);opacity:.7}
     .posts-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px}
-    .post-card{background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 10px rgba(0,0,0,.06);transition:transform .2s;text-decoration:none;color:inherit;display:flex;flex-direction:column}
-    .post-card:hover{transform:translateY(-3px);box-shadow:0 4px 20px rgba(0,0,0,.1)}
-    .post-card .post-img-wrap{width:100%;height:0;padding-bottom:75%;position:relative;overflow:hidden;background:#e8ecf0;flex-shrink:0}
+    .post-card{
+      background:var(--surface);border:1px solid var(--border-2);
+      border-radius:16px;overflow:hidden;
+      box-shadow:0 2px 12px rgba(0,0,0,.2);
+      transition:transform .2s,box-shadow .2s;text-decoration:none;color:inherit;
+      display:flex;flex-direction:column;
+    }
+    .post-card:hover{transform:translateY(-3px);box-shadow:0 6px 24px rgba(0,0,0,.3)}
+    .post-card .post-img-wrap{
+      width:100%;height:0;padding-bottom:75%;position:relative;overflow:hidden;
+      background:var(--surface-2);flex-shrink:0;
+    }
     .post-card .post-img-wrap img{position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;display:block}
-    .post-card .post-img-wrap .no-img{position:absolute;top:0;left:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:2.5rem;color:#bbb;background:linear-gradient(135deg,#dce6f0,#c8d6e5)}
+    .post-card .post-img-wrap .no-img{
+      position:absolute;top:0;left:0;width:100%;height:100%;
+      display:flex;align-items:center;justify-content:center;
+      color:var(--text-3);
+      background:linear-gradient(135deg,var(--surface-2),var(--surface));
+    }
     .post-body{padding:14px;flex:1;display:flex;flex-direction:column}
-    .caption{font-size:.82rem;color:#555;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;margin-bottom:10px;min-height:3.5em}
+    .caption{font-size:.82rem;color:var(--text-2);display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;margin-bottom:10px;min-height:3.5em;line-height:1.5}
     .post-meta{display:flex;gap:6px;flex-wrap:wrap}
-    .post-meta span{font-size:.75rem;background:#f0f2f5;padding:3px 8px;border-radius:20px;color:#444}
-    .post-meta span.highlight{background:#0a66c2;color:#fff}
-    .post-date{font-size:.7rem;color:#aaa;margin-top:auto;padding-top:8px;display:flex;justify-content:space-between;align-items:center}
-    .media-badge{font-size:.65rem;background:#e8f0fe;padding:2px 6px;border-radius:4px;color:#0a66c2;font-weight:600}
+    .post-meta span{
+      font-size:.72rem;background:var(--surface-2);border:1px solid var(--border-2);
+      padding:3px 8px;border-radius:20px;color:var(--text-2);
+      display:inline-flex;align-items:center;gap:4px;
+      font-family:'JetBrains Mono',monospace;
+    }
+    .post-meta span.highlight{background:rgba(10,102,194,.2);border-color:rgba(10,102,194,.3);color:#7bb8eb}
+    .post-date{
+      font-size:.7rem;color:var(--text-3);margin-top:auto;padding-top:8px;
+      display:flex;justify-content:space-between;align-items:center;
+    }
+    .post-date svg{margin-right:3px;vertical-align:middle}
+    .media-badge{
+      font-size:.65rem;background:rgba(10,102,194,.12);padding:2px 6px;border-radius:4px;
+      color:var(--linkedin);font-weight:600;
+    }
 
-    .loading{text-align:center;padding:80px;color:#888;font-size:1.1rem}
-    .err{background:#ffeaea;color:#c0392b;border-radius:10px;padding:16px;margin:20px 0}
-    .toast{position:fixed;bottom:24px;right:24px;background:#333;color:#fff;padding:12px 24px;border-radius:10px;font-size:.9rem;z-index:999;display:none;box-shadow:0 4px 20px rgba(0,0,0,.3)}
-    .toast.warn{background:#e67e22}
-    .toast.ok{background:#27ae60}
+    /* ── States ── */
+    .loading{
+      text-align:center;padding:80px;color:var(--text-3);font-size:1.1rem;
+      display:flex;flex-direction:column;align-items:center;gap:12px;
+    }
+    .loading svg{animation:spin 1.5s linear infinite;color:var(--linkedin)}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .err{background:rgba(239,68,68,.1);color:#ef4444;border:1px solid rgba(239,68,68,.2);border-radius:16px;padding:16px;margin:20px 0}
+    .toast{
+      position:fixed;bottom:24px;right:24px;background:var(--surface-2);color:var(--text);
+      padding:12px 24px;border-radius:12px;font-size:.9rem;z-index:999;display:none;
+      box-shadow:0 4px 20px rgba(0,0,0,.4);border:1px solid var(--border-2);
+    }
+    .toast.warn{background:#92400e;border-color:rgba(245,158,11,.3)}
+    .toast.ok{background:rgba(16,185,129,.15);border-color:rgba(16,185,129,.3);color:var(--emerald)}
+
+    /* ── Animations ── */
+    @keyframes fadeUp{
+      from{opacity:0;transform:translateY(16px)}
+      to{opacity:1;transform:translateY(0)}
+    }
+    .kpi-card{animation:fadeUp .5s ease both}
+    .kpi-card:nth-child(1){animation-delay:.05s}
+    .kpi-card:nth-child(2){animation-delay:.1s}
+    .kpi-card:nth-child(3){animation-delay:.15s}
+    .kpi-card:nth-child(4){animation-delay:.2s}
+    .kpi-card:nth-child(5){animation-delay:.25s}
+    .kpi-card:nth-child(6){animation-delay:.3s}
+    .kpi-card:nth-child(7){animation-delay:.35s}
+    .chart-card{animation:fadeUp .5s ease both}
+    .chart-card:nth-child(1){animation-delay:.1s}
+    .chart-card:nth-child(2){animation-delay:.15s}
+    .chart-card:nth-child(3){animation-delay:.2s}
+    .chart-card:nth-child(4){animation-delay:.25s}
+    .chart-card:nth-child(5){animation-delay:.3s}
+    .top-post-section{animation:fadeUp .5s ease both;animation-delay:.15s}
+    .posts-section{animation:fadeUp .5s ease both;animation-delay:.2s}
+    .post-card{animation:fadeUp .4s ease both}
+    .post-card:nth-child(1){animation-delay:.05s}
+    .post-card:nth-child(2){animation-delay:.1s}
+    .post-card:nth-child(3){animation-delay:.15s}
+    .post-card:nth-child(4){animation-delay:.2s}
+    .post-card:nth-child(5){animation-delay:.25s}
+    .post-card:nth-child(6){animation-delay:.3s}
 
     @media(max-width:600px){
       header{padding:14px 16px}
@@ -86,8 +261,8 @@
 <body>
 <header>
   <div style="display:flex;align-items:center;gap:12px">
-    <a href="/" class="btn-back">&larr; Menu</a>
-    <h1>💼 LinkedIn Dashboard</h1>
+    <a href="/" class="btn-back"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg> Menu</a>
+    <h1><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-4 0v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg> LinkedIn Dashboard</h1>
   </div>
   <div class="right">
     <span id="lastFetch">Loading...</span>
@@ -97,17 +272,39 @@
     </form>
   </div>
 </header>
-<main id="app"><div class="loading">⏳ Loading LinkedIn data...</div></main>
+<main id="app"><div class="loading"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> Loading LinkedIn data...</div></main>
 <div class="toast" id="toast"></div>
 <script>
+/* ── SVG icon strings ── */
+var SVG_THUMBSUP='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 10v12"/><path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2h0a3.13 3.13 0 0 1 3 3.88Z"/></svg>';
+var SVG_COMMENT='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>';
+var SVG_SHARE='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m17 2 4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="m7 22-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/></svg>';
+var SVG_FIRE='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 12c2-2.96 0-7-1-8 0 3.038-1.773 4.741-3 6-1.226 1.26-2 3.24-2 5a6 6 0 1 0 12 0c0-1.532-1.056-3.94-2-5-1.786 3-2.791 3-4 2z"/></svg>';
+var SVG_PEOPLE='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>';
+var SVG_CHART='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>';
+var SVG_STAR='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>';
+var SVG_TROPHY='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>';
+var SVG_CALENDAR='<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>';
+var SVG_DOC='<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>';
+var SVG_BUILDING='<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M9 22v-4h6v4"/><path d="M8 6h.01"/><path d="M16 6h.01"/><path d="M12 6h.01"/><path d="M12 10h.01"/><path d="M12 14h.01"/><path d="M16 10h.01"/><path d="M16 14h.01"/><path d="M8 10h.01"/><path d="M8 14h.01"/></svg>';
+var SVG_DOC_SM='<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>';
+
+/* Reaction SVGs */
+var SVG_R_LIKE=SVG_THUMBSUP;
+var SVG_R_CELEBRATE='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12s2-4 8-4 8 4 8 4-2 4-8 4-8-4-8-4Z"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/></svg>';
+var SVG_R_SUPPORT='<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>';
+var SVG_R_LOVE=SVG_R_SUPPORT;
+var SVG_R_INSIGHTFUL='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>';
+var SVG_R_FUNNY='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>';
+
 /* ── Reaction type map ── */
 var RMAP={
-  LIKE:{emoji:'\uD83D\uDC4D',label:'Like'},
-  APPRECIATION:{emoji:'\uD83D\uDC4F',label:'Celebrate'},
-  EMPATHY:{emoji:'\uD83D\uDE4F',label:'Support'},
-  PRAISE:{emoji:'\u2764\uFE0F',label:'Love'},
-  INTEREST:{emoji:'\uD83D\uDCA1',label:'Insightful'},
-  ENTERTAINMENT:{emoji:'\uD83D\uDE04',label:'Funny'}
+  LIKE:{emoji:SVG_R_LIKE,label:'Like',cls:'pill-like'},
+  APPRECIATION:{emoji:SVG_R_CELEBRATE,label:'Celebrate',cls:'pill-celebrate'},
+  EMPATHY:{emoji:SVG_R_SUPPORT,label:'Support',cls:'pill-support'},
+  PRAISE:{emoji:SVG_R_LOVE,label:'Love',cls:'pill-love'},
+  INTEREST:{emoji:SVG_R_INSIGHTFUL,label:'Insightful',cls:'pill-insightful'},
+  ENTERTAINMENT:{emoji:SVG_R_FUNNY,label:'Funny',cls:'pill-funny'}
 };
 var PIE_COLORS=['#0a66c2','#e16745','#7fc15e','#f5c75d','#5f4b8b','#44bec7'];
 
@@ -136,25 +333,27 @@ function timeData(ins,name){
 function makeChart(id,label,td,color,wholeNumbers){
   var el=document.getElementById(id);if(!el)return;
   if(!td){el.style.display='none';var p=document.createElement('div');p.className='na-msg';p.textContent='Not enough data yet \u2014 keep refreshing daily!';el.parentElement.appendChild(p);return;}
-  new Chart(el,{type:'line',data:{labels:td.labels,datasets:[{label:label,data:td.data,borderColor:color,backgroundColor:color+'22',fill:true,tension:.35,pointRadius:2,borderWidth:2}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{x:{grid:{display:false},ticks:{maxTicksLimit:10,font:{size:11}}},y:{beginAtZero:false,grid:{color:'#f5f5f5'},ticks:{font:{size:11},precision:wholeNumbers?0:undefined}}}}});
+  new Chart(el,{type:'line',data:{labels:td.labels,datasets:[{label:label,data:td.data,borderColor:color,backgroundColor:color+'22',fill:true,tension:.35,pointRadius:2,borderWidth:2}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{x:{grid:{color:'rgba(148,163,184,.06)'},ticks:{maxTicksLimit:10,font:{size:11},color:'#64748b'}},y:{beginAtZero:false,grid:{color:'rgba(148,163,184,.06)'},ticks:{font:{size:11},color:'#64748b',precision:wholeNumbers?0:undefined}}}}});
 }
 
 function makeBarChart(id,label,labels,data,color){
   var el=document.getElementById(id);if(!el)return;
-  new Chart(el,{type:'bar',data:{labels:labels,datasets:[{label:label,data:data,backgroundColor:color+'88',borderColor:color,borderWidth:1,borderRadius:6}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{x:{grid:{display:false},ticks:{font:{size:10}}},y:{beginAtZero:true,grid:{color:'#f5f5f5'}}}}});
+  new Chart(el,{type:'bar',data:{labels:labels,datasets:[{label:label,data:data,backgroundColor:color+'44',borderColor:color,borderWidth:1,borderRadius:6}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{x:{grid:{color:'rgba(148,163,184,.06)'},ticks:{font:{size:10},color:'#64748b'}},y:{beginAtZero:true,grid:{color:'rgba(148,163,184,.06)'},ticks:{color:'#64748b'}}}}});
 }
 
 function makePieChart(id,labels,data,colors){
   var el=document.getElementById(id);if(!el)return;
   if(!data||data.length===0){el.style.display='none';var p=document.createElement('div');p.className='na-msg';p.textContent='No reaction data yet.';el.parentElement.appendChild(p);return;}
-  new Chart(el,{type:'doughnut',data:{labels:labels,datasets:[{data:data,backgroundColor:colors,borderWidth:2,hoverOffset:6}]},options:{responsive:true,plugins:{legend:{position:'right',labels:{font:{size:12},padding:10}}}}});
+  new Chart(el,{type:'doughnut',data:{labels:labels,datasets:[{data:data,backgroundColor:colors,borderColor:'#111827',borderWidth:2,hoverOffset:6}]},options:{responsive:true,plugins:{legend:{position:'right',labels:{font:{size:12},color:'#94a3b8',padding:10}}}}});
 }
 
 function render(d){
   var a=d.account||{},insights=d.insights,posts=d.posts||[],cm=d.calculated_metrics||{},lastFetch=d.lastFetch,source=d.source;
 
   document.getElementById('lastFetch').textContent='Updated: '+new Date(lastFetch).toLocaleString('de-DE');
-  document.getElementById('sourceBadge').textContent=source==='apify'?'\uD83D\uDD17 Apify':source==='mock'?'\uD83E\uDDEA Mock':'\uD83D\uDCE1 Live';
+  var srcIcon;
+  if(source==='apify'){srcIcon='Apify'}else if(source==='mock'){srcIcon='Mock'}else{srcIcon='Live'}
+  document.getElementById('sourceBadge').textContent=srcIcon;
 
   var followers=a.followers_count||0;
   var engRate=cm.engagement_rate||0;
@@ -197,7 +396,7 @@ function render(d){
     });
   });
   var rTypes=Object.keys(rTotals).filter(function(t){return rTotals[t]>0});
-  var pieLabels=rTypes.map(function(t){return(RMAP[t]?RMAP[t].emoji+' '+RMAP[t].label:t)});
+  var pieLabels=rTypes.map(function(t){return(RMAP[t]?RMAP[t].label:t)});
   var pieData=rTypes.map(function(t){return rTotals[t]});
 
   /* posting frequency */
@@ -215,28 +414,28 @@ function render(d){
   if(bestPost){
     var bi=bestPost.insights||{};
     var bsrc=bestPost.local_image||'';
-    bestPostHTML='<div class="top-post-section"><h3>\uD83C\uDFC6 Best Performing Post</h3>';
+    bestPostHTML='<div class="top-post-section"><h3>'+SVG_TROPHY+' Best Performing Post</h3>';
     bestPostHTML+='<a href="'+(bestPost.permalink||'#')+'" target="_blank" class="top-post-card">';
     if(bsrc){
-      bestPostHTML+='<img class="top-img" src="'+esc(bsrc)+'" alt="" onerror="this.className=\'top-img-placeholder\';this.outerHTML=\'<div class=top-img-placeholder>\uD83D\uDCDD</div>\'">';
+      bestPostHTML+='<img class="top-img" src="'+esc(bsrc)+'" alt="" onerror="this.className=\'top-img-placeholder\';this.outerHTML=\'<div class=top-img-placeholder>'+SVG_DOC+'</div>\'">';
     }else{
-      bestPostHTML+='<div class="top-img-placeholder">\uD83D\uDCDD</div>';
+      bestPostHTML+='<div class="top-img-placeholder">'+SVG_DOC+'</div>';
     }
     bestPostHTML+='<div class="top-info"><h4>Highest engagement from recent posts</h4>';
     bestPostHTML+='<div class="top-caption">'+esc(bestPost.text||'')+'</div>';
     bestPostHTML+='<div class="top-stats">';
-    bestPostHTML+='<span>\uD83D\uDC4D '+fmt(bi.reactions)+' Reactions</span>';
-    bestPostHTML+='<span>\uD83D\uDCAC '+fmt(bi.comments)+' Comments</span>';
-    bestPostHTML+='<span>\uD83D\uDD01 '+fmt(bi.shares)+' Shares</span>';
-    bestPostHTML+='<span>\uD83D\uDD25 '+fmt(bi.engagement)+' Total</span>';
+    bestPostHTML+='<span>'+SVG_THUMBSUP+' '+fmt(bi.reactions)+' Reactions</span>';
+    bestPostHTML+='<span>'+SVG_COMMENT+' '+fmt(bi.comments)+' Comments</span>';
+    bestPostHTML+='<span>'+SVG_SHARE+' '+fmt(bi.shares)+' Shares</span>';
+    bestPostHTML+='<span>'+SVG_FIRE+' '+fmt(bi.engagement)+' Total</span>';
     bestPostHTML+='</div>';
     /* reaction pills */
     if(bi.reaction_breakdown){
       bestPostHTML+='<div class="reaction-pills">';
       var entries=Object.keys(bi.reaction_breakdown).filter(function(t){return bi.reaction_breakdown[t]>0}).sort(function(a,b){return bi.reaction_breakdown[b]-bi.reaction_breakdown[a]});
       entries.forEach(function(t){
-        var r=RMAP[t]||{emoji:'',label:t};
-        bestPostHTML+='<span class="pill">'+r.emoji+' '+r.label+': '+fmt(bi.reaction_breakdown[t])+'</span>';
+        var r=RMAP[t]||{emoji:'',label:t,cls:''};
+        bestPostHTML+='<span class="pill '+(r.cls||'')+'">'+r.emoji+' '+r.label+': '+fmt(bi.reaction_breakdown[t])+'</span>';
       });
       bestPostHTML+='</div>';
     }
@@ -254,20 +453,20 @@ function render(d){
     postsHTML+='<a class="post-card" href="'+(p.permalink||'#')+'" target="_blank" rel="noopener">';
     postsHTML+='<div class="post-img-wrap">';
     if(src){
-      postsHTML+='<img src="'+esc(src)+'" alt="" loading="lazy" onerror="this.parentElement.innerHTML=\'<div class=no-img>\uD83D\uDCDD</div>\'">';
+      postsHTML+='<img src="'+esc(src)+'" alt="" loading="lazy" onerror="this.parentElement.innerHTML=\'<div class=no-img>'+SVG_DOC_SM+'</div>\'">';
     }else{
-      postsHTML+='<div class="no-img">\uD83D\uDCDD</div>';
+      postsHTML+='<div class="no-img">'+SVG_DOC_SM+'</div>';
     }
     postsHTML+='</div>';
     postsHTML+='<div class="post-body">';
     postsHTML+='<div class="caption">'+esc(p.text||'(no text)')+'</div>';
     postsHTML+='<div class="post-meta">';
-    postsHTML+='<span>\uD83D\uDC4D '+fmt(ins.reactions)+'</span>';
-    postsHTML+='<span>\uD83D\uDCAC '+fmt(ins.comments)+'</span>';
-    postsHTML+='<span>\uD83D\uDD01 '+fmt(ins.shares)+'</span>';
-    postsHTML+='<span'+(isBest?' class="highlight"':'')+'>\uD83D\uDD25 '+fmt(eng)+'</span>';
+    postsHTML+='<span>'+SVG_THUMBSUP+' '+fmt(ins.reactions)+'</span>';
+    postsHTML+='<span>'+SVG_COMMENT+' '+fmt(ins.comments)+'</span>';
+    postsHTML+='<span>'+SVG_SHARE+' '+fmt(ins.shares)+'</span>';
+    postsHTML+='<span'+(isBest?' class="highlight"':'')+'>'+SVG_FIRE+' '+fmt(eng)+'</span>';
     postsHTML+='</div>';
-    postsHTML+='<div class="post-date"><span>'+relDate(p.timestamp)+(p.timestamp?', '+new Date(p.timestamp).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'}):'')+'</span><span class="media-badge">'+(p.media_type||'')+'</span></div>';
+    postsHTML+='<div class="post-date"><span>'+SVG_CALENDAR+' '+relDate(p.timestamp)+(p.timestamp?', '+new Date(p.timestamp).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'}):'')+'</span><span class="media-badge">'+(p.media_type||'')+'</span></div>';
     postsHTML+='</div></a>';
   });
 
@@ -278,9 +477,9 @@ function render(d){
   var logoSrc=a.logo_url||'';
   html+='<div class="profile-card">';
   if(logoSrc){
-    html+='<img src="'+esc(logoSrc)+'" alt="" onerror="this.outerHTML=\'<div style=font-size:3rem>\uD83C\uDFE2</div>\'">';
+    html+='<img src="'+esc(logoSrc)+'" alt="" onerror="this.outerHTML=\'<div class=logo-placeholder>'+SVG_BUILDING+'</div>\'">';
   }else{
-    html+='<div style="font-size:3rem">\uD83C\uDFE2</div>';
+    html+='<div class="logo-placeholder">'+SVG_BUILDING+'</div>';
   }
   html+='<div class="info"><h2>'+esc(a.name||'LinkedIn Company')+'</h2>';
   if(a.tagline)html+='<div class="tagline">'+esc(a.tagline)+'</div>';
@@ -290,13 +489,13 @@ function render(d){
 
   /* KPI cards */
   html+='<div class="kpi-grid">';
-  html+='<div class="kpi-card" style="--accent:#0a66c2"><div class="label">Followers</div><div class="value">'+fmt(followers)+'</div><div class="sub">Total</div>'+followerChange+'</div>';
-  html+='<div class="kpi-card" style="--accent:#27ae60"><div class="label">Engagement Rate</div><div class="value">'+pct(engRate)+'</div><div class="sub">(reactions+comments+shares) / followers</div></div>';
-  html+='<div class="kpi-card" style="--accent:#e16745"><div class="label">Avg Reactions</div><div class="value">'+fmt(Math.round(avgReactions))+'</div><div class="sub">Per post</div></div>';
-  html+='<div class="kpi-card" style="--accent:#f39c12"><div class="label">Avg Comments</div><div class="value">'+fmt(Math.round(avgComments))+'</div><div class="sub">Per post</div></div>';
-  html+='<div class="kpi-card" style="--accent:#44bec7"><div class="label">Avg Shares</div><div class="value">'+fmt(Math.round(avgShares))+'</div><div class="sub">Per post</div></div>';
-  html+='<div class="kpi-card" style="--accent:#003049"><div class="label">Total Reactions</div><div class="value">'+fmt(totalReactions)+'</div><div class="sub">Last '+postCount+' posts</div></div>';
-  html+='<div class="kpi-card" style="--accent:#2980b9"><div class="label">Posts Scraped</div><div class="value">'+fmt(postCount)+'</div><div class="sub">'+freqText+' posts/week</div></div>';
+  html+='<div class="kpi-card" style="--accent:#0a66c2"><div class="icon">'+SVG_PEOPLE+'</div><div class="label">Followers</div><div class="value">'+fmt(followers)+'</div><div class="sub">Total</div>'+followerChange+'</div>';
+  html+='<div class="kpi-card" style="--accent:#10b981"><div class="icon">'+SVG_CHART+'</div><div class="label">Engagement Rate</div><div class="value">'+pct(engRate)+'</div><div class="sub">(reactions+comments+shares) / followers</div></div>';
+  html+='<div class="kpi-card" style="--accent:#e16745"><div class="icon">'+SVG_THUMBSUP+'</div><div class="label">Avg Reactions</div><div class="value">'+fmt(Math.round(avgReactions))+'</div><div class="sub">Per post</div></div>';
+  html+='<div class="kpi-card" style="--accent:#f59e0b"><div class="icon">'+SVG_COMMENT+'</div><div class="label">Avg Comments</div><div class="value">'+fmt(Math.round(avgComments))+'</div><div class="sub">Per post</div></div>';
+  html+='<div class="kpi-card" style="--accent:#44bec7"><div class="icon">'+SVG_SHARE+'</div><div class="label">Avg Shares</div><div class="value">'+fmt(Math.round(avgShares))+'</div><div class="sub">Per post</div></div>';
+  html+='<div class="kpi-card" style="--accent:#6366f1"><div class="icon">'+SVG_FIRE+'</div><div class="label">Total Reactions</div><div class="value">'+fmt(totalReactions)+'</div><div class="sub">Last '+postCount+' posts</div></div>';
+  html+='<div class="kpi-card" style="--accent:#8b5cf6"><div class="icon">'+SVG_STAR+'</div><div class="label">Posts Scraped</div><div class="value">'+fmt(postCount)+'</div><div class="sub">'+freqText+' posts/week</div></div>';
   html+='</div>';
 
   /* Best post */
@@ -304,29 +503,29 @@ function render(d){
 
   /* Charts */
   html+='<div class="charts-grid">';
-  html+='<div class="chart-card"><h3>\uD83D\uDC65 Follower Count Over Time</h3><canvas id="cFC"></canvas></div>';
-  html+='<div class="chart-card"><h3>\uD83D\uDCCA Engagement Rate Over Time</h3><canvas id="cER"></canvas></div>';
-  html+='<div class="chart-card"><h3>\uD83D\uDC4D Reactions per Post</h3><canvas id="cReactions"></canvas></div>';
-  html+='<div class="chart-card"><h3>\uD83D\uDCAC Comments per Post</h3><canvas id="cComments"></canvas></div>';
-  html+='<div class="chart-card"><h3>\uD83C\uDF1F Reaction Type Distribution</h3><canvas id="cPie"></canvas></div>';
+  html+='<div class="chart-card"><h3>'+SVG_PEOPLE+' Follower Count Over Time</h3><canvas id="cFC"></canvas></div>';
+  html+='<div class="chart-card"><h3>'+SVG_CHART+' Engagement Rate Over Time</h3><canvas id="cER"></canvas></div>';
+  html+='<div class="chart-card"><h3>'+SVG_THUMBSUP+' Reactions per Post</h3><canvas id="cReactions"></canvas></div>';
+  html+='<div class="chart-card"><h3>'+SVG_COMMENT+' Comments per Post</h3><canvas id="cComments"></canvas></div>';
+  html+='<div class="chart-card"><h3>'+SVG_STAR+' Reaction Type Distribution</h3><canvas id="cPie"></canvas></div>';
   html+='</div>';
 
   /* Recent posts */
-  html+='<div class="posts-section"><h3>\uD83D\uDDD3 Recent Posts</h3><div class="posts-grid">'+postsHTML+'</div></div>';
+  html+='<div class="posts-section"><h3>'+SVG_CALENDAR+' Recent Posts</h3><div class="posts-grid">'+postsHTML+'</div></div>';
 
   document.getElementById('app').innerHTML=html;
 
   /* Render charts */
   makeChart('cFC','Followers',fcData,'#0a66c2', true);
-  makeChart('cER','Engagement Rate',timeData(insights,'engagement_rate'),'#27ae60', false);
+  makeChart('cER','Engagement Rate',timeData(insights,'engagement_rate'),'#10b981', false);
   makeBarChart('cReactions','Reactions',postLabels,postReactions,'#0a66c2');
-  makeBarChart('cComments','Comments',postLabels,postComments,'#f39c12');
+  makeBarChart('cComments','Comments',postLabels,postComments,'#f59e0b');
   makePieChart('cPie',pieLabels,pieData,PIE_COLORS.slice(0,pieLabels.length));
 }
 
 async function loadData(){
   try{var r=await fetch('/api/linkedin/kpis');if(!r.ok)throw new Error('HTTP '+r.status);render(await r.json())}
-  catch(e){document.getElementById('app').innerHTML='<div class="err">\u274C '+e.message+'</div>'}
+  catch(e){document.getElementById('app').innerHTML='<div class="err">'+e.message+'</div>'}
 }
 
 
