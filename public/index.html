@@ -16,10 +16,10 @@
     header h1{font-family:'Syne',sans-serif;font-size:1.15rem;font-weight:700;letter-spacing:-.01em}
     .btn-logout{padding:8px 18px;background:transparent;color:var(--text-3);border:1px solid var(--border-2);border-radius:8px;cursor:pointer;font-size:.8rem;font-family:'Nunito Sans',sans-serif;transition:all .2s}
     .btn-logout:hover{color:var(--text-2);border-color:rgba(148,163,184,.2);background:rgba(148,163,184,.04)}
-    main{display:flex;flex-direction:column;align-items:center;padding:80px 24px 60px}
-    .hero-icon{width:64px;height:64px;border-radius:18px;background:var(--emerald-dim);display:flex;align-items:center;justify-content:center;margin-bottom:20px;color:var(--emerald);animation:fadeUp .5s ease both}
-    .hero-title{font-family:'Syne',sans-serif;font-size:2rem;font-weight:800;letter-spacing:-.03em;margin-bottom:6px;animation:fadeUp .5s ease .08s both}
-    .hero-sub{color:var(--text-3);font-size:.95rem;margin-bottom:56px;animation:fadeUp .5s ease .14s both}
+    main{display:flex;flex-direction:column;align-items:center;padding:36px 24px 60px}
+    .hero-icon{width:52px;height:52px;border-radius:14px;background:var(--emerald-dim);display:flex;align-items:center;justify-content:center;margin-bottom:12px;color:var(--emerald);animation:fadeUp .5s ease both}
+    .hero-title{font-family:'Syne',sans-serif;font-size:1.8rem;font-weight:800;letter-spacing:-.03em;margin-bottom:4px;animation:fadeUp .5s ease .08s both}
+    .hero-sub{color:var(--text-3);font-size:.9rem;margin-bottom:32px;animation:fadeUp .5s ease .14s both}
     @keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
     .cards{display:flex;flex-wrap:wrap;justify-content:center;gap:20px;width:100%;max-width:1200px}
     .platform-card{width:380px}
@@ -46,7 +46,7 @@
     .platform-card:hover .view-link svg{transform:translateX(3px)}
     .loading-mini{font-size:.82rem;color:var(--text-3);text-align:center;padding:14px 0}
     @media(max-width:600px){
-      main{padding:40px 16px 40px}
+      main{padding:24px 16px 40px}
       .cards{grid-template-columns:1fr}
       .hero-title{font-size:1.6rem}
     }
@@ -133,12 +133,11 @@ function renderCard(el,data,type){
 
   if(type==='ev'){
     var m=data.members||{};
-    var inv=data.invoices||{};
     el.innerHTML=
       '<div class="kpi-row">'+
       '<div class="mini-kpi"><div class="val">'+fmt(cm.active_members||m.total)+'</div><div class="lbl">Members</div></div>'+
-      '<div class="mini-kpi"><div class="val">'+eur(cm.total_revenue||inv.total_revenue)+'</div><div class="lbl">Revenue</div></div>'+
-      '<div class="mini-kpi"><div class="val">'+fmt(cm.open_invoices||inv.open_count)+'</div><div class="lbl">Open Inv.</div></div>'+
+      '<div class="mini-kpi"><div class="val">'+fmt(m.new_last_30_days||0)+'</div><div class="lbl">New (30d)</div></div>'+
+      '<div class="mini-kpi"><div class="val">'+fmt(m.resigned||0)+'</div><div class="lbl">Resigned</div></div>'+
       '</div>';
   } else {
     var followers,engRate,posts;
@@ -189,7 +188,7 @@ async function loadFinanceCard(){
       '<div class="kpi-row">'+
       '<div class="mini-kpi"><div class="val">'+eur(cur.total_income)+'</div><div class="lbl">Income '+d.current_year+'</div></div>'+
       '<div class="mini-kpi"><div class="val">'+sign+(yoy.absolute_change||0)+'</div><div class="lbl">Members YoY</div></div>'+
-      '<div class="mini-kpi"><div class="val">'+eur(cur.total_expenses)+'</div><div class="lbl">Expenses '+d.current_year+'</div></div>'+
+      '<div class="mini-kpi"><div class="val">'+eur((cur.total_income||0)-(cur.total_expenses||0))+'</div><div class="lbl">Net '+d.current_year+'</div></div>'+
       '</div>';
   }catch(e){
     document.getElementById('finKpis').innerHTML='<span style="color:var(--text-3)">No data yet</span>';
