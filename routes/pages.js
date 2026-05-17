@@ -1,6 +1,6 @@
 const express = require('express');
 const path    = require('path');
-const { requireAuth } = require('../middleware/auth');
+const { requireAuth, requireRole } = require('../middleware/auth');
 
 const router = express.Router();
 
@@ -16,7 +16,7 @@ router.get('/linkedin', requireAuth, (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'linkedin.html'));
 });
 
-router.get('/easyverein', requireAuth, (req, res) => {
+router.get('/easyverein', requireRole('admin'), (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'easyverein.html'));
 });
 

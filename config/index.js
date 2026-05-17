@@ -10,6 +10,7 @@ module.exports = {
   get IG_USERNAME()        { return process.env.INSTAGRAM_USERNAME || ''; },
   get LI_COMPANY_URL()     { return process.env.LINKEDIN_COMPANY_URL || ''; },
   get DASHBOARD_PASSWORD() { return process.env.DASHBOARD_PASSWORD || ''; },
+  get MARKETING_PASSWORD() { return process.env.MARKETING_PASSWORD || ''; },
   get SESSION_SECRET()     { return process.env.SESSION_SECRET || ''; },
   get CRON_SECRET()        { return process.env.CRON_SECRET || ''; },
   get EASYVEREIN_TOKEN()   { return process.env.EASYVEREIN_SECRET || ''; },

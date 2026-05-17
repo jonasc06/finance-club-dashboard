@@ -37,6 +37,7 @@ async function loadAllSecrets() {
     'APIFY_TOKEN',
     'SESSION_SECRET',
     'DASHBOARD_PASSWORD',
+    'MARKETING_PASSWORD',
     'LINKEDIN_COMPANY_URL',
     'INSTAGRAM_USERNAME',
     'CRON_SECRET',

@@ -66,6 +66,14 @@ async function start() {
     stream.pipe(res);
   });
 
+  // ── Block direct static access to admin-only pages ──
+  app.use((req, res, next) => {
+    if (req.path === '/easyverein.html' && req.session?.role && req.session.role !== 'admin') {
+      return res.status(403).send('Access denied');
+    }
+    next();
+  });
+
   // ── Static assets (behind auth) ──
   app.use(requireAuth, express.static(path.join(__dirname, 'public')));
 
