@@ -190,8 +190,20 @@ async function fetchData() {
   const openAmount = openInvoicesList.reduce((sum, i) => sum + invoiceTotal(i), 0);
   const overdueAmount = overdueInvoices.reduce((sum, i) => sum + invoiceTotal(i), 0);
 
+  // Categorize: member fee = amount <= 36 and divisible by 3
+  function isMemberFee(amount) {
+    return amount > 0 && amount <= 36 && Math.round(amount * 100) % 300 === 0;
+  }
+
+  const paidMemberFees = paidInvoices.filter(i => isMemberFee(invoiceTotal(i)));
+  const paidCooperation = paidInvoices.filter(i => !isMemberFee(invoiceTotal(i)));
+  const memberFeeRevenue = paidMemberFees.reduce((sum, i) => sum + invoiceTotal(i), 0);
+  const cooperationRevenue = paidCooperation.reduce((sum, i) => sum + invoiceTotal(i), 0);
+
   // Monthly revenue for last 12 months
   const monthlyRevenue = [];
+  const monthlyMemberFees = [];
+  const monthlyCooperation = [];
   for (let i = 11; i >= 0; i--) {
     const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
     const monthKey = d.toISOString().slice(0, 7);
@@ -199,7 +211,15 @@ async function fetchData() {
     const monthTotal = paidInvoices
       .filter(inv => inv.date && inv.date.startsWith(monthKey))
       .reduce((sum, inv) => sum + invoiceTotal(inv), 0);
+    const monthMemberFee = paidMemberFees
+      .filter(inv => inv.date && inv.date.startsWith(monthKey))
+      .reduce((sum, inv) => sum + invoiceTotal(inv), 0);
+    const monthCoop = paidCooperation
+      .filter(inv => inv.date && inv.date.startsWith(monthKey))
+      .reduce((sum, inv) => sum + invoiceTotal(inv), 0);
     monthlyRevenue.push({ month: monthKey, label: monthLabel, value: Math.round(monthTotal * 100) / 100 });
+    monthlyMemberFees.push({ month: monthKey, label: monthLabel, value: Math.round(monthMemberFee * 100) / 100 });
+    monthlyCooperation.push({ month: monthKey, label: monthLabel, value: Math.round(monthCoop * 100) / 100 });
   }
 
   // ── Bookings analysis ──
@@ -257,12 +277,18 @@ async function fetchData() {
     },
     invoices: {
       total_revenue: Math.round(totalRevenue * 100) / 100,
+      member_fee_revenue: Math.round(memberFeeRevenue * 100) / 100,
+      cooperation_revenue: Math.round(cooperationRevenue * 100) / 100,
+      member_fee_count: paidMemberFees.length,
+      cooperation_count: paidCooperation.length,
       open_count: openInvoicesList.length,
       open_amount: Math.round(openAmount * 100) / 100,
       overdue_count: overdueInvoices.length,
       overdue_amount: Math.round(overdueAmount * 100) / 100,
       paid_count: paidInvoices.length,
       monthly_revenue: monthlyRevenue,
+      monthly_member_fees: monthlyMemberFees,
+      monthly_cooperation: monthlyCooperation,
       monthly_income: monthlyIncome,
       monthly_expenses: monthlyExpenses,
     },

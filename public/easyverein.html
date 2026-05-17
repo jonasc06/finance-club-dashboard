@@ -207,19 +207,24 @@ function render(d){
   html+='<div class="kpi-card" style="--accent:#ef4444"><div class="label">'+SVG_USER_X+' Resigned</div><div class="value">'+fmt(members.resigned)+'</div><div class="sub">All time</div></div>';
   html+='</div>';
 
-  /* ── KPI Cards: Finances ── */
-  html+='<div class="section-title">'+SVG_WALLET+' Finances</div>';
+  /* ── KPI Cards: Revenue Split ── */
+  html+='<div class="section-title">'+SVG_WALLET+' Revenue Split</div>';
   html+='<div class="kpi-grid">';
-  html+='<div class="kpi-card" style="--accent:#10b981"><div class="label">'+SVG_WALLET+' Total Revenue</div><div class="value">'+eur(inv.total_revenue)+'</div><div class="sub">From paid invoices</div></div>';
-  html+='<div class="kpi-card" style="--accent:#f59e0b"><div class="label">'+SVG_ALERT+' Open Invoices</div><div class="value">'+fmt(inv.open_count)+'</div><div class="sub">'+eur(inv.open_amount)+'</div></div>';
-  html+='<div class="kpi-card" style="--accent:#ef4444"><div class="label">'+SVG_ALERT+' Overdue</div><div class="value">'+fmt(inv.overdue_count)+'</div><div class="sub">'+eur(inv.overdue_amount)+'</div></div>';
-  html+='<div class="kpi-card" style="--accent:#3b82f6"><div class="label">'+SVG_CHECK+' Paid Invoices</div><div class="value">'+fmt(inv.paid_count)+'</div><div class="sub">Completed</div></div>';
+  html+='<div class="kpi-card" style="--accent:#10b981"><div class="label">'+SVG_WALLET+' Total Revenue</div><div class="value">'+eur(inv.total_revenue)+'</div><div class="sub">All paid invoices</div></div>';
+  html+='<div class="kpi-card" style="--accent:#3b82f6"><div class="label">'+SVG_USERS+' Member Fees</div><div class="value">'+eur(inv.member_fee_revenue)+'</div><div class="sub">'+fmt(inv.member_fee_count)+' payments (yearly in Dec)</div></div>';
+  html+='<div class="kpi-card" style="--accent:#a855f7"><div class="label">'+SVG_TARGET+' Cooperations</div><div class="value">'+eur(inv.cooperation_revenue)+'</div><div class="sub">'+fmt(inv.cooperation_count)+' payments (throughout year)</div></div>';
+  html+='<div class="kpi-card" style="--accent:#f59e0b"><div class="label">'+SVG_ALERT+' Open / Overdue</div><div class="value">'+fmt(inv.open_count)+' / '+fmt(inv.overdue_count)+'</div><div class="sub">'+eur(inv.open_amount)+' open</div></div>';
   html+='</div>';
 
-  /* ── Charts ── */
+  /* ── Revenue Split Charts ── */
+  html+='<div class="charts-grid">';
+  html+='<div class="chart-card"><h3>'+SVG_USERS+' Member Fee Revenue (monthly)</h3><canvas id="cMemberFees"></canvas></div>';
+  html+='<div class="chart-card"><h3>'+SVG_TARGET+' Cooperation Revenue (monthly)</h3><canvas id="cCooperation"></canvas></div>';
+  html+='</div>';
+
+  /* ── Other Charts ── */
   html+='<div class="charts-grid">';
   html+='<div class="chart-card"><h3>'+SVG_CHART_LINE+' Member Count Over Time</h3><canvas id="cMembers"></canvas></div>';
-  html+='<div class="chart-card"><h3>'+SVG_CHART_BAR+' Monthly Revenue</h3><canvas id="cRevenue"></canvas></div>';
   html+='<div class="chart-card"><h3>'+SVG_CHART_BAR+' Income vs Expenses</h3><canvas id="cIncomeExpenses"></canvas></div>';
   html+='<div class="chart-card"><h3>'+SVG_TRENDING+' Open Invoices Over Time</h3><canvas id="cOpenInv"></canvas></div>';
   html+='<div class="chart-card"><h3>'+SVG_TARGET+' Invoice Status</h3><canvas id="cInvStatus"></canvas></div>';
@@ -255,10 +260,16 @@ function render(d){
   makeChart('cMembers','Members',mcData,'#10b981',true);
   makeChart('cOpenInv','Open Invoices',timeData(insights,'open_invoices'),'#ef4444',true);
 
-  /* Monthly revenue bar */
-  var mr=inv.monthly_revenue||[];
-  if(mr.length>0){
-    makeBarChart('cRevenue','Revenue',mr.map(function(m){return m.label}),mr.map(function(m){return m.value}),'#10b981');
+  /* Member Fees bar chart */
+  var mf=inv.monthly_member_fees||[];
+  if(mf.length>0){
+    makeBarChart('cMemberFees','Member Fees',mf.map(function(m){return m.label}),mf.map(function(m){return m.value}),'#3b82f6');
+  }
+
+  /* Cooperation revenue bar chart */
+  var mc=inv.monthly_cooperation||[];
+  if(mc.length>0){
+    makeBarChart('cCooperation','Cooperations',mc.map(function(m){return m.label}),mc.map(function(m){return m.value}),'#a855f7');
   }
 
   /* Income vs Expenses */
