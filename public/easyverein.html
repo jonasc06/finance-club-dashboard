@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-  <title>Finance Club Leipzig – EasyVerein Dashboard</title>
+  <title>Finance Club Leipzig – Members & Inventory</title>
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=JetBrains+Mono:wght@400;500&family=Nunito+Sans:opsz,wght@6..12,400;6..12,500;6..12,600&display=swap" rel="stylesheet"/>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
   <style>
@@ -113,7 +113,7 @@
 <header>
   <div class="header-left">
     <a href="/" class="btn-back"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg> Menu</a>
-    <h1><span class="icon-accent"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span> EasyVerein Dashboard</h1>
+    <h1><span class="icon-accent"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span> Members & Inventory</h1>
   </div>
   <div class="right">
     <span id="lastFetch">Loading...</span>
@@ -181,12 +181,11 @@ var SVG_LIST='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke
 var SVG_PACKAGE='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="16.5" y1="9.4" x2="7.5" y2="4.21"/><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>';
 
 function render(d){
-  var org=d.organization||{},members=d.members||{},inv=d.invoices||{},inventory=d.inventory||[],cm=d.calculated_metrics||{},insights=d.insights,lastFetch=d.lastFetch,source=d.source;
+  var members=d.members||{},inventory=d.inventory||[],insights=d.insights,lastFetch=d.lastFetch,source=d.source;
 
   document.getElementById('lastFetch').textContent='Updated: '+new Date(lastFetch).toLocaleString('de-DE');
   document.getElementById('sourceBadge').textContent=source==='easyverein-api'?'EasyVerein API':'';
 
-  /* member change from history */
   var mcData=timeData(insights,'total_members');
   var memberChange='';
   if(mcData&&mcData.data.length>=2){
@@ -207,27 +206,9 @@ function render(d){
   html+='<div class="kpi-card" style="--accent:#ef4444"><div class="label">'+SVG_USER_X+' Resigned</div><div class="value">'+fmt(members.resigned)+'</div><div class="sub">All time</div></div>';
   html+='</div>';
 
-  /* ── KPI Cards: Revenue Split ── */
-  html+='<div class="section-title">'+SVG_WALLET+' Revenue Split</div>';
-  html+='<div class="kpi-grid">';
-  html+='<div class="kpi-card" style="--accent:#10b981"><div class="label">'+SVG_WALLET+' Total Revenue</div><div class="value">'+eur(inv.total_revenue)+'</div><div class="sub">All paid invoices</div></div>';
-  html+='<div class="kpi-card" style="--accent:#3b82f6"><div class="label">'+SVG_USERS+' Member Fees</div><div class="value">'+eur(inv.member_fee_revenue)+'</div><div class="sub">'+fmt(inv.member_fee_count)+' payments (yearly in Dec)</div></div>';
-  html+='<div class="kpi-card" style="--accent:#a855f7"><div class="label">'+SVG_TARGET+' Cooperations</div><div class="value">'+eur(inv.cooperation_revenue)+'</div><div class="sub">'+fmt(inv.cooperation_count)+' payments (throughout year)</div></div>';
-  html+='<div class="kpi-card" style="--accent:#f59e0b"><div class="label">'+SVG_ALERT+' Open / Overdue</div><div class="value">'+fmt(inv.open_count)+' / '+fmt(inv.overdue_count)+'</div><div class="sub">'+eur(inv.open_amount)+' open</div></div>';
-  html+='</div>';
-
-  /* ── Revenue Split Charts ── */
-  html+='<div class="charts-grid">';
-  html+='<div class="chart-card"><h3>'+SVG_USERS+' Member Fee Revenue (monthly)</h3><canvas id="cMemberFees"></canvas></div>';
-  html+='<div class="chart-card"><h3>'+SVG_TARGET+' Cooperation Revenue (monthly)</h3><canvas id="cCooperation"></canvas></div>';
-  html+='</div>';
-
-  /* ── Other Charts ── */
+  /* ── Member Count Chart ── */
   html+='<div class="charts-grid">';
   html+='<div class="chart-card"><h3>'+SVG_CHART_LINE+' Member Count Over Time</h3><canvas id="cMembers"></canvas></div>';
-  html+='<div class="chart-card"><h3>'+SVG_CHART_BAR+' Income vs Expenses</h3><canvas id="cIncomeExpenses"></canvas></div>';
-  html+='<div class="chart-card"><h3>'+SVG_TRENDING+' Open Invoices Over Time</h3><canvas id="cOpenInv"></canvas></div>';
-  html+='<div class="chart-card"><h3>'+SVG_TARGET+' Invoice Status</h3><canvas id="cInvStatus"></canvas></div>';
   html+='</div>';
 
   /* ── Member Groups ── */
@@ -256,37 +237,7 @@ function render(d){
 
   document.getElementById('app').innerHTML=html;
 
-  /* ── Render Charts ── */
   makeChart('cMembers','Members',mcData,'#10b981',true);
-  makeChart('cOpenInv','Open Invoices',timeData(insights,'open_invoices'),'#ef4444',true);
-
-  /* Member Fees bar chart */
-  var mf=inv.monthly_member_fees||[];
-  if(mf.length>0){
-    makeBarChart('cMemberFees','Member Fees',mf.map(function(m){return m.label}),mf.map(function(m){return m.value}),'#3b82f6');
-  }
-
-  /* Cooperation revenue bar chart */
-  var mc=inv.monthly_cooperation||[];
-  if(mc.length>0){
-    makeBarChart('cCooperation','Cooperations',mc.map(function(m){return m.label}),mc.map(function(m){return m.value}),'#a855f7');
-  }
-
-  /* Income vs Expenses */
-  var mi=inv.monthly_income||[];
-  var me=inv.monthly_expenses||[];
-  if(mi.length>0){
-    makeDoubleBarChart('cIncomeExpenses','Income','Expenses',
-      mi.map(function(m){return m.label}),
-      mi.map(function(m){return m.value}),
-      me.map(function(m){return m.value}),
-      '#10b981','#ef4444');
-  }
-
-  /* Invoice status pie */
-  var invLabels=['Paid','Open','Overdue'];
-  var invData=[inv.paid_count||0,Math.max(0,(inv.open_count||0)-(inv.overdue_count||0)),inv.overdue_count||0];
-  makePieChart('cInvStatus',invLabels,invData,['#10b981','#f59e0b','#ef4444']);
 }
 
 async function loadData(){

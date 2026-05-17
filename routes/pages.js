@@ -20,4 +20,8 @@ router.get('/easyverein', requireRole('admin'), (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'easyverein.html'));
 });
 
+router.get('/finance', requireRole('admin'), (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'finance.html'));
+});
+
 module.exports = router;

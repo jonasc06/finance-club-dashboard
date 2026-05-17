@@ -89,8 +89,8 @@ async function appendSnapshot(totalMembers, totalRevenue, openInvoices) {
     history.open_invoices.push({ date: today, value: openInvoices });
   }
 
-  history.total_members = history.total_members.slice(-90);
-  history.total_revenue = history.total_revenue.slice(-90);
+  history.total_members = history.total_members.slice(-400);
+  history.total_revenue = history.total_revenue.slice(-400);
   history.open_invoices = history.open_invoices.slice(-90);
 
   await saveHistory(history);
@@ -244,6 +244,9 @@ async function fetchData() {
     totalStock: item.totalStock || 0,
   }));
 
+  // ── Finance KPIs (default to latest year with data) ──
+  const financeKpis = computeFinanceKpis(bookings, members, null);
+
   // ── History snapshots ──
   const history = await appendSnapshot(activeMembers.length, totalRevenue, openInvoicesList.length);
 
@@ -299,9 +302,182 @@ async function fetchData() {
       total_revenue: Math.round(totalRevenue * 100) / 100,
       open_invoices: openInvoicesList.length,
     },
+    finance_kpis: financeKpis,
+    _raw_bookings: bookings.map(b => ({ amount: b.amount, date: b.date, description: b.description })),
+    _raw_members: members.map(m => ({ joinDate: m.joinDate, resignationDate: m.resignationDate, _isApplication: m._isApplication })),
     insights,
     lastFetch: new Date().toISOString(),
     source: 'easyverein-api',
+  };
+}
+
+// ── Booking classification ──
+
+function classifyIncome(description, amount) {
+  const d = (description || '').toLowerCase();
+  if (d.includes('mitgliedsbeitrag') || (amount > 0 && amount <= 36 && Math.round(amount * 100) % 300 === 0)) {
+    return 'member_fees';
+  }
+  // SumUp bulk payments (DATUM...ANZAHL) — per-person ≤36 = member fees (SumUp fee causes slight deviation from exact €3 multiples)
+  const sumupMatch = (description || '').match(/ANZAHL\s*(\d+)/i);
+  if (sumupMatch) {
+    const count = parseInt(sumupMatch[1]);
+    if (count > 0) {
+      const perPerson = amount / count;
+      if (perPerson <= 36) {
+        return 'member_fees';
+      }
+    }
+    return 'other';
+  }
+  if (amount >= 200 && /rech|refnr|sponsoring|\/inv\/|re\.nr|re-nr|\+re:|rnr|\d{4}-\d{2}\/|pro\s*forma/i.test(description || '')) {
+    return 'sponsoring';
+  }
+  if (/polo|hoodie|t-shirt|quarter\s*zip|pullover|jacke|pulli|kapuzenjacke|merch/i.test(description || '')) {
+    return 'merch';
+  }
+  if (amount === 69.95 || (amount > 60 && amount < 75 && /^[A-ZÄÖÜ][a-zäöüß]+ [A-ZÄÖÜ]/i.test(description || ''))) {
+    return 'merch';
+  }
+  if (/münchen|muenchen|munich|wien|frankfurt|ffm|kaution|pfand|börsenfahrt|borsenfahrt|muenchenfahrt|münchenfahrt|bvh.*konferenz|konferenz.*bvh/i.test(description || '')) {
+    return 'travel_deposits';
+  }
+  return 'other';
+}
+
+function classifyExpense(description) {
+  const d = (description || '').toLowerCase();
+  if (d.includes('stammtisch') || /flaschenpost|pizzeria|lieferando|dominos/i.test(description || '')) return 'stammtisch';
+  if (/fahrt|reise|zugfahrt|anreise|fahrtkost|münchen|muenchen|munich|wien|frankfurt|ffm|hotel|booking\.com|airbnb|unterkunft/i.test(description || '')) return 'travel';
+  if (/event|sommerfest|konferenz|strategieevent|jubiläum|uni\s*camp|paintball|padel|bowling|klettern|laser/i.test(description || '')) return 'events';
+  if (/alleaktien|easyverein|canva|zoom|notion|stripe|spotify|bvh|openai|claude|anthropic|ionos/i.test(description || '')) return 'subscriptions';
+  if (/polo|hoodie|t-shirt|quarter\s*zip|pullover|jacke|pulli|merch|sticker|stick(?:er)?.*datum|banner/i.test(description || '')) return 'merch';
+  return 'other';
+}
+
+function computeSplit(bookings, type) {
+  const isIncome = type === 'income';
+  const filtered = bookings.filter(b => isIncome ? parseFloat(b.amount) > 0 : parseFloat(b.amount) < 0);
+  const buckets = isIncome
+    ? { member_fees: 0, sponsoring: 0, travel_deposits: 0, merch: 0, other: 0 }
+    : { stammtisch: 0, travel: 0, events: 0, subscriptions: 0, merch: 0, other: 0 };
+
+  for (const b of filtered) {
+    const amt = Math.abs(parseFloat(b.amount));
+    const cat = isIncome ? classifyIncome(b.description, parseFloat(b.amount)) : classifyExpense(b.description);
+    buckets[cat] = (buckets[cat] || 0) + amt;
+  }
+
+  const total = Object.values(buckets).reduce((s, v) => s + v, 0);
+  const split = {};
+  for (const [key, val] of Object.entries(buckets)) {
+    split[key] = {
+      total: Math.round(val * 100) / 100,
+      percentage: total > 0 ? Math.round((val / total) * 10000) / 100 : 0,
+    };
+  }
+  return { split, total: Math.round(total * 100) / 100 };
+}
+
+function computeFinanceKpis(bookings, members, selectedYear) {
+  const now = new Date();
+
+  // Determine available years from bookings
+  const years = [...new Set(bookings.filter(b => b.date).map(b => parseInt(b.date.slice(0, 4))))].sort();
+
+  const currentYear = selectedYear || (years.length > 0 ? years[years.length - 1] : now.getFullYear());
+  const yearStart = new Date(currentYear, 0, 1).toISOString();
+  const oneYearAgo = new Date(currentYear - 1, now.getMonth(), now.getDate());
+
+  // Split bookings into selected year vs all-time
+  const currentYearBookings = bookings.filter(b => b.date && b.date >= yearStart);
+
+  // All-time splits
+  const allTimeRevenue = computeSplit(bookings, 'income');
+  const allTimeExpenses = computeSplit(bookings, 'expense');
+
+  // Current year splits
+  const currentRevenue = computeSplit(currentYearBookings, 'income');
+  const currentExpenses = computeSplit(currentYearBookings, 'expense');
+
+  // Monthly income/expenses for selected year
+  const monthlyIncome = [];
+  const monthlyExpenses = [];
+  const lastMonth = currentYear < now.getFullYear() ? 11 : now.getMonth();
+  for (let m = 0; m <= lastMonth; m++) {
+    const d = new Date(currentYear, m, 1);
+    const monthKey = d.toISOString().slice(0, 7);
+    const monthLabel = d.toLocaleDateString('de-DE', { month: 'short' });
+    const monthBookings = currentYearBookings.filter(b => b.date && b.date.slice(0, 7) === monthKey);
+    const income = monthBookings.filter(b => parseFloat(b.amount) > 0).reduce((s, b) => s + parseFloat(b.amount), 0);
+    const expenses = monthBookings.filter(b => parseFloat(b.amount) < 0).reduce((s, b) => s + Math.abs(parseFloat(b.amount)), 0);
+    monthlyIncome.push({ month: monthKey, label: monthLabel, value: Math.round(income * 100) / 100 });
+    monthlyExpenses.push({ month: monthKey, label: monthLabel, value: Math.round(expenses * 100) / 100 });
+  }
+
+  // Members YoY comparison
+  const activeMembers = members.filter(m => !m.resignationDate && !m._isApplication);
+  const activeYearAgo = members.filter(m => {
+    if (m._isApplication) return false;
+    const joined = new Date(m.joinDate);
+    if (joined > oneYearAgo) return false;
+    if (m.resignationDate && new Date(m.resignationDate) <= oneYearAgo) return false;
+    return true;
+  });
+  const currentCount = activeMembers.length;
+  const yearAgoCount = activeYearAgo.length;
+  const members_yoy = {
+    current: currentCount,
+    year_ago: yearAgoCount,
+    absolute_change: currentCount - yearAgoCount,
+    percentage_change: yearAgoCount > 0 ? Math.round(((currentCount - yearAgoCount) / yearAgoCount) * 10000) / 100 : 0,
+  };
+
+  // Average membership duration
+  const resignedMembers = members.filter(m => m.resignationDate && !m._isApplication);
+  const resignedDurations = resignedMembers
+    .filter(m => m.joinDate)
+    .map(m => (new Date(m.resignationDate) - new Date(m.joinDate)) / (1000 * 60 * 60 * 24));
+  const activeDurations = activeMembers
+    .filter(m => m.joinDate)
+    .map(m => (now - new Date(m.joinDate)) / (1000 * 60 * 60 * 24));
+
+  const avgResigned = resignedDurations.length > 0
+    ? resignedDurations.reduce((s, d) => s + d, 0) / resignedDurations.length : 0;
+  const avgActive = activeDurations.length > 0
+    ? activeDurations.reduce((s, d) => s + d, 0) / activeDurations.length : 0;
+  const allDurations = [...resignedDurations, ...activeDurations];
+  const avgOverall = allDurations.length > 0
+    ? allDurations.reduce((s, d) => s + d, 0) / allDurations.length : 0;
+
+  const avg_membership_duration = {
+    overall_days: Math.round(avgOverall),
+    overall_months: Math.round(avgOverall / 30.44 * 10) / 10,
+    resigned_avg_days: Math.round(avgResigned),
+    resigned_avg_months: Math.round(avgResigned / 30.44 * 10) / 10,
+    active_avg_days: Math.round(avgActive),
+    active_avg_months: Math.round(avgActive / 30.44 * 10) / 10,
+  };
+
+  return {
+    current_year: currentYear,
+    available_years: years,
+    current: {
+      revenue_split: currentRevenue.split,
+      expense_split: currentExpenses.split,
+      total_income: currentRevenue.total,
+      total_expenses: currentExpenses.total,
+      monthly_income: monthlyIncome,
+      monthly_expenses: monthlyExpenses,
+    },
+    all_time: {
+      revenue_split: allTimeRevenue.split,
+      expense_split: allTimeExpenses.split,
+      total_income: allTimeRevenue.total,
+      total_expenses: allTimeExpenses.total,
+    },
+    members_yoy,
+    avg_membership_duration,
   };
 }
 
@@ -319,4 +495,4 @@ async function refreshCache() {
   }
 }
 
-module.exports = { getCache, loadCacheFromDisk, refreshCache, loadHistory };
+module.exports = { getCache, loadCacheFromDisk, refreshCache, loadHistory, computeFinanceKpis };

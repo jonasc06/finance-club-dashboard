@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>Finance Club Leipzig – Finance KPIs</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=JetBrains+Mono:wght@400;500&family=Nunito+Sans:opsz,wght@6..12,400;6..12,500;6..12,600&display=swap" rel="stylesheet"/>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+  <style>
+    :root{--bg:#080b12;--surface:#111827;--surface-2:#1e293b;--border:rgba(148,163,184,.08);--border-2:rgba(148,163,184,.12);--text:#f1f5f9;--text-2:#94a3b8;--text-3:#64748b;--emerald:#10b981;--emerald-dim:rgba(16,185,129,.12);--blue:#3b82f6;--purple:#a855f7;--amber:#f59e0b;--red:#ef4444}
+
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Nunito Sans',system-ui,sans-serif;font-weight:400;background:var(--bg);color:var(--text);
+      background-image:
+        linear-gradient(var(--border) 1px,transparent 1px),
+        linear-gradient(90deg,var(--border) 1px,transparent 1px),
+        radial-gradient(ellipse 60% 40% at 50% 0%,rgba(16,185,129,.07) 0%,transparent 70%);
+      background-size:64px 64px,64px 64px,100% 100%;
+      min-height:100vh}
+
+    header{background:var(--surface);border-bottom:1px solid var(--border-2);padding:16px 32px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
+    .header-left{display:flex;align-items:center;gap:14px}
+    header h1{font-family:'Syne',sans-serif;font-weight:700;font-size:1.25rem;display:flex;align-items:center;gap:10px;color:var(--text)}
+    header h1 .icon-accent{color:var(--emerald)}
+    .right{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+    .btn-back{padding:7px 14px;background:transparent;color:var(--text-2);border:1px solid var(--border-2);border-radius:8px;font-size:.78rem;text-decoration:none;transition:all .2s;display:inline-flex;align-items:center;gap:6px;font-family:'Nunito Sans',sans-serif;font-weight:500}
+    .btn-back:hover{background:var(--surface-2);color:var(--text)}
+    .btn-logout{padding:7px 14px;background:transparent;color:var(--text-3);border:1px solid var(--border-2);border-radius:8px;cursor:pointer;font-size:.78rem;font-family:'Nunito Sans',sans-serif;font-weight:500;transition:all .2s}
+    .btn-logout:hover{background:var(--surface-2);color:var(--text)}
+    .year-select{padding:7px 14px;background:var(--surface-2);color:var(--text);border:1px solid var(--border-2);border-radius:8px;font-size:.82rem;font-family:'JetBrains Mono',monospace;cursor:pointer;appearance:none;-webkit-appearance:none;padding-right:28px;background-image:url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%2394a3b8' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center}
+    .year-select:hover{border-color:rgba(148,163,184,.25)}
+    .year-select:focus{outline:none;border-color:var(--emerald)}
+
+    main{padding:32px;max-width:1320px;margin:0 auto}
+
+    .section-title{font-family:'Syne',sans-serif;font-weight:700;font-size:1.05rem;margin:32px 0 16px;color:var(--text);display:flex;align-items:center;gap:8px;letter-spacing:.01em}
+    .section-title:first-child{margin-top:0}
+    .section-title svg{color:var(--emerald);flex-shrink:0}
+    .section-title .period{font-family:'JetBrains Mono',monospace;font-size:.7rem;font-weight:400;color:var(--text-3);background:var(--surface-2);padding:3px 10px;border-radius:12px;margin-left:8px}
+
+    .kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:28px}
+    .kpi-card{background:var(--surface);border:1px solid var(--border-2);border-radius:16px;padding:24px 20px;box-shadow:0 2px 12px rgba(0,0,0,.2);text-align:center;position:relative;overflow:hidden;opacity:0;animation:fadeUp .5s ease forwards}
+    .kpi-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--accent,var(--emerald))}
+    .kpi-card .label{font-size:.68rem;text-transform:uppercase;letter-spacing:.08em;color:var(--text-3);margin-bottom:8px;font-family:'Nunito Sans',sans-serif;font-weight:600}
+    .kpi-card .value{font-family:'JetBrains Mono',monospace;font-size:1.9rem;font-weight:500;color:var(--accent,var(--emerald))}
+    .kpi-card .sub{font-size:.72rem;color:var(--text-3);margin-top:6px;font-family:'Nunito Sans',sans-serif}
+    .kpi-card .change{font-size:.72rem;margin-top:8px;font-weight:600;font-family:'JetBrains Mono',monospace;display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:20px}
+    .change.up{color:#10b981;background:rgba(16,185,129,.1)}
+    .change.down{color:#ef4444;background:rgba(239,68,68,.1)}
+
+    .charts-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(420px,1fr));gap:20px;margin-bottom:32px}
+    .chart-card{background:var(--surface);border:1px solid var(--border-2);border-radius:16px;padding:24px;box-shadow:0 2px 12px rgba(0,0,0,.2);opacity:0;animation:fadeUp .5s ease forwards}
+    .chart-card h3{font-family:'Syne',sans-serif;font-weight:700;font-size:.92rem;margin-bottom:16px;color:var(--text-2);display:flex;align-items:center;gap:7px}
+    .chart-card h3 svg{color:var(--emerald);flex-shrink:0}
+
+    .loading{text-align:center;padding:80px;color:var(--text-3);font-size:1rem;font-family:'Nunito Sans',sans-serif;display:flex;flex-direction:column;align-items:center;gap:12px}
+    .loading svg{color:var(--emerald);animation:spin 1.2s linear infinite}
+    .err{background:rgba(239,68,68,.08);color:#f87171;border:1px solid rgba(239,68,68,.15);border-radius:12px;padding:18px;margin:20px 0;font-family:'Nunito Sans',sans-serif;display:flex;align-items:center;gap:8px}
+
+    @keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+    @keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+
+    .kpi-card:nth-child(1){animation-delay:.05s}
+    .kpi-card:nth-child(2){animation-delay:.1s}
+    .kpi-card:nth-child(3){animation-delay:.15s}
+    .kpi-card:nth-child(4){animation-delay:.2s}
+    .kpi-card:nth-child(5){animation-delay:.25s}
+    .chart-card:nth-child(1){animation-delay:.15s}
+    .chart-card:nth-child(2){animation-delay:.2s}
+    .chart-card:nth-child(3){animation-delay:.25s}
+
+    @media(max-width:600px){
+      header{padding:14px 16px}
+      main{padding:16px}
+      .charts-grid{grid-template-columns:1fr}
+      .kpi-grid{grid-template-columns:repeat(2,1fr)}
+    }
+  </style>
+</head>
+<body>
+<header>
+  <div class="header-left">
+    <a href="/" class="btn-back"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg> Menu</a>
+    <h1><span class="icon-accent"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></span> Finance KPIs</h1>
+  </div>
+  <div class="right">
+    <select id="yearSelect" class="year-select"></select>
+    <form method="POST" action="/logout" style="margin:0">
+      <button class="btn-logout" type="submit">Logout</button>
+    </form>
+  </div>
+</header>
+<main id="app"><div class="loading"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> Loading finance data...</div></main>
+<script>
+function eur(n){if(n==null)return'—';return n.toLocaleString('de-DE',{style:'currency',currency:'EUR'})}
+function pct(n){return n!=null?n.toFixed(1)+'%':'—'}
+function fmt(n){if(n==null||n===0)return'—';if(n>=1e6)return(n/1e6).toFixed(1)+'M';if(n>=1e3)return(n/1e3).toFixed(1)+'K';return String(n)}
+
+var SVG_DOLLAR='<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>';
+var SVG_BAR='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></svg>';
+var SVG_USERS='<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>';
+var SVG_TRENDING='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>';
+
+function render(d){
+  var year=d.current_year;
+  var cur=d.current||{};
+  var all=d.all_time||{};
+  var yoy=d.members_yoy||{};
+  var dur=d.avg_membership_duration||{};
+  var curRev=cur.revenue_split||{};
+  var curExp=cur.expense_split||{};
+  var allRev=all.revenue_split||{};
+  var allExp=all.expense_split||{};
+
+  var html='';
+
+  // ── Current Year Overview ──
+  html+='<div class="section-title">'+SVG_DOLLAR+' Overview<span class="period">'+year+'</span></div>';
+  html+='<div class="kpi-grid">';
+  html+='<div class="kpi-card" style="--accent:var(--emerald)"><div class="label">Income '+year+'</div><div class="value">'+eur(cur.total_income)+'</div></div>';
+  html+='<div class="kpi-card" style="--accent:var(--red)"><div class="label">Expenses '+year+'</div><div class="value">'+eur(cur.total_expenses)+'</div></div>';
+  var net=(cur.total_income||0)-(cur.total_expenses||0);
+  html+='<div class="kpi-card" style="--accent:'+(net>=0?'var(--emerald)':'var(--red)')+'"><div class="label">Net '+year+'</div><div class="value">'+eur(net)+'</div></div>';
+  html+='</div>';
+
+  // ── Current Year Revenue Split ──
+  html+='<div class="section-title">'+SVG_TRENDING+' Revenue Diversification<span class="period">'+year+'</span></div>';
+  html+='<div class="kpi-grid">';
+  html+='<div class="kpi-card" style="--accent:var(--emerald)"><div class="label">Member Fees</div><div class="value">'+pct(curRev.member_fees?.percentage)+'</div><div class="sub">'+eur(curRev.member_fees?.total)+'</div></div>';
+  html+='<div class="kpi-card" style="--accent:var(--blue)"><div class="label">Sponsoring</div><div class="value">'+pct(curRev.sponsoring?.percentage)+'</div><div class="sub">'+eur(curRev.sponsoring?.total)+'</div></div>';
+  html+='<div class="kpi-card" style="--accent:var(--purple)"><div class="label">Travel Deposits</div><div class="value">'+pct(curRev.travel_deposits?.percentage)+'</div><div class="sub">'+eur(curRev.travel_deposits?.total)+'</div></div>';
+  html+='<div class="kpi-card" style="--accent:var(--amber)"><div class="label">Merch</div><div class="value">'+pct(curRev.merch?.percentage)+'</div><div class="sub">'+eur(curRev.merch?.total)+'</div></div>';
+  html+='<div class="kpi-card" style="--accent:var(--text-3)"><div class="label">Other</div><div class="value">'+pct(curRev.other?.percentage)+'</div><div class="sub">'+eur(curRev.other?.total)+'</div></div>';
+  html+='</div>';
+
+  // ── Current Year Expense Split ──
+  html+='<div class="section-title">'+SVG_BAR+' Expense Categories<span class="period">'+year+'</span></div>';
+  html+='<div class="kpi-grid">';
+  html+='<div class="kpi-card" style="--accent:var(--amber)"><div class="label">Stammtische / Food</div><div class="value">'+pct(curExp.stammtisch?.percentage)+'</div><div class="sub">'+eur(curExp.stammtisch?.total)+'</div></div>';
+  html+='<div class="kpi-card" style="--accent:var(--blue)"><div class="label">Travel / Fahrten</div><div class="value">'+pct(curExp.travel?.percentage)+'</div><div class="sub">'+eur(curExp.travel?.total)+'</div></div>';
+  html+='<div class="kpi-card" style="--accent:var(--purple)"><div class="label">Events</div><div class="value">'+pct(curExp.events?.percentage)+'</div><div class="sub">'+eur(curExp.events?.total)+'</div></div>';
+  html+='<div class="kpi-card" style="--accent:var(--red)"><div class="label">Subscriptions</div><div class="value">'+pct(curExp.subscriptions?.percentage)+'</div><div class="sub">'+eur(curExp.subscriptions?.total)+'</div></div>';
+  html+='<div class="kpi-card" style="--accent:var(--emerald)"><div class="label">Merch</div><div class="value">'+pct(curExp.merch?.percentage)+'</div><div class="sub">'+eur(curExp.merch?.total)+'</div></div>';
+  html+='<div class="kpi-card" style="--accent:var(--text-3)"><div class="label">Other</div><div class="value">'+pct(curExp.other?.percentage)+'</div><div class="sub">'+eur(curExp.other?.total)+'</div></div>';
+  html+='</div>';
+
+  // ── Charts: Current Year ──
+  html+='<div class="charts-grid">';
+  html+='<div class="chart-card"><h3>'+SVG_DOLLAR+' Revenue Split '+year+'</h3><canvas id="cRevCurrent"></canvas></div>';
+  html+='<div class="chart-card"><h3>'+SVG_BAR+' Income vs Expenses '+year+'</h3><canvas id="cMonthly"></canvas></div>';
+  html+='<div class="chart-card"><h3>'+SVG_BAR+' Expense Breakdown '+year+'</h3><canvas id="cExpCurrent"></canvas></div>';
+  html+='</div>';
+
+  // ── All Time ──
+  html+='<div class="section-title">'+SVG_DOLLAR+' Revenue Diversification<span class="period">All Time</span></div>';
+  html+='<div class="kpi-grid">';
+  html+='<div class="kpi-card" style="--accent:var(--emerald)"><div class="label">Total Income</div><div class="value">'+eur(all.total_income)+'</div></div>';
+  html+='<div class="kpi-card" style="--accent:var(--emerald)"><div class="label">Member Fees</div><div class="value">'+pct(allRev.member_fees?.percentage)+'</div><div class="sub">'+eur(allRev.member_fees?.total)+'</div></div>';
+  html+='<div class="kpi-card" style="--accent:var(--blue)"><div class="label">Sponsoring</div><div class="value">'+pct(allRev.sponsoring?.percentage)+'</div><div class="sub">'+eur(allRev.sponsoring?.total)+'</div></div>';
+  html+='<div class="kpi-card" style="--accent:var(--purple)"><div class="label">Travel Deposits</div><div class="value">'+pct(allRev.travel_deposits?.percentage)+'</div><div class="sub">'+eur(allRev.travel_deposits?.total)+'</div></div>';
+  html+='<div class="kpi-card" style="--accent:var(--amber)"><div class="label">Merch</div><div class="value">'+pct(allRev.merch?.percentage)+'</div><div class="sub">'+eur(allRev.merch?.total)+'</div></div>';
+  html+='</div>';
+
+  // ── Membership ──
+  html+='<div class="section-title">'+SVG_USERS+' Membership</div>';
+  html+='<div class="kpi-grid">';
+  var yoyChange=yoy.absolute_change||0;
+  var yoyCls=yoyChange>=0?'up':'down';
+  var yoySign=yoyChange>0?'+':'';
+  html+='<div class="kpi-card" style="--accent:var(--emerald)"><div class="label">Current Members</div><div class="value">'+fmt(yoy.current)+'</div><div class="change '+yoyCls+'">'+yoySign+yoyChange+' vs. last year ('+yoySign+pct(yoy.percentage_change)+')</div></div>';
+  html+='<div class="kpi-card" style="--accent:var(--blue)"><div class="label">Members 1 Year Ago</div><div class="value">'+fmt(yoy.year_ago)+'</div></div>';
+  html+='<div class="kpi-card" style="--accent:var(--purple)"><div class="label">Avg. Duration (Overall)</div><div class="value">'+dur.overall_months+'</div><div class="sub">months</div></div>';
+  html+='<div class="kpi-card" style="--accent:var(--amber)"><div class="label">Avg. Duration (Active)</div><div class="value">'+dur.active_avg_months+'</div><div class="sub">months current tenure</div></div>';
+  html+='<div class="kpi-card" style="--accent:var(--red)"><div class="label">Avg. Duration (Resigned)</div><div class="value">'+dur.resigned_avg_months+'</div><div class="sub">months before leaving</div></div>';
+  html+='</div>';
+
+  document.getElementById('app').innerHTML=html;
+
+  // ── Charts ──
+  var revLabels=['Member Fees','Sponsoring','Travel Deposits','Merch','Other'];
+  var revColors=['#10b981','#3b82f6','#a855f7','#f59e0b','#64748b'];
+
+  // Current year revenue donut
+  var curRevData=[curRev.member_fees?.total||0,curRev.sponsoring?.total||0,curRev.travel_deposits?.total||0,curRev.merch?.total||0,curRev.other?.total||0];
+  var el1=document.getElementById('cRevCurrent');
+  if(el1){
+    new Chart(el1,{type:'doughnut',data:{labels:revLabels,datasets:[{data:curRevData,backgroundColor:revColors,borderWidth:2,borderColor:'#111827',hoverOffset:6}]},options:{responsive:true,plugins:{legend:{position:'right',labels:{font:{size:12},color:'#94a3b8',padding:10}}}}});
+  }
+
+  // Monthly income vs expenses
+  var mi=cur.monthly_income||[];
+  var me=cur.monthly_expenses||[];
+  var el2=document.getElementById('cMonthly');
+  if(el2&&mi.length>0){
+    new Chart(el2,{type:'bar',data:{labels:mi.map(function(m){return m.label}),datasets:[
+      {label:'Income',data:mi.map(function(m){return m.value}),backgroundColor:'#10b98188',borderColor:'#10b981',borderWidth:1,borderRadius:6},
+      {label:'Expenses',data:me.map(function(m){return m.value}),backgroundColor:'#ef444488',borderColor:'#ef4444',borderWidth:1,borderRadius:6}
+    ]},options:{responsive:true,plugins:{legend:{position:'top',labels:{font:{size:11},color:'#94a3b8'}}},scales:{x:{grid:{display:false},ticks:{color:'#64748b'}},y:{beginAtZero:true,grid:{color:'rgba(148,163,184,.06)'},ticks:{color:'#64748b'}}}}});
+  }
+
+  // Current year expense breakdown
+  var expLabels=['Stammtische / Food','Travel','Events','Subscriptions','Merch','Other'];
+  var expColors=['#f59e0b','#3b82f6','#a855f7','#ef4444','#10b981','#64748b'];
+  var curExpData=[curExp.stammtisch?.total||0,curExp.travel?.total||0,curExp.events?.total||0,curExp.subscriptions?.total||0,curExp.merch?.total||0,curExp.other?.total||0];
+  var el3=document.getElementById('cExpCurrent');
+  if(el3){
+    new Chart(el3,{type:'bar',data:{labels:expLabels,datasets:[{data:curExpData,backgroundColor:expColors.map(function(c){return c+'88'}),borderColor:expColors,borderWidth:1,borderRadius:6}]},options:{responsive:true,indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{beginAtZero:true,grid:{color:'rgba(148,163,184,.06)'},ticks:{color:'#64748b',callback:function(v){return v>=1000?(v/1000).toFixed(0)+'k':v}}},y:{grid:{display:false},ticks:{color:'#94a3b8',font:{size:12}}}}}});
+  }
+}
+
+var currentSelectedYear=null;
+
+async function loadData(year){
+  try{
+    var url='/api/easyverein/finance-kpis';
+    if(year)url+='?year='+year;
+    var r=await fetch(url);
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    var d=await r.json();
+
+    // Populate year selector
+    var sel=document.getElementById('yearSelect');
+    var years=d.available_years||[];
+    if(sel.options.length===0&&years.length>0){
+      years.slice().reverse().forEach(function(y){
+        var opt=document.createElement('option');
+        opt.value=y;opt.textContent=y;
+        if(y===d.current_year)opt.selected=true;
+        sel.appendChild(opt);
+      });
+    }
+    currentSelectedYear=d.current_year;
+
+    render(d);
+  }catch(e){
+    document.getElementById('app').innerHTML='<div class="err"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg> '+e.message+'</div>';
+  }
+}
+
+document.getElementById('yearSelect').addEventListener('change',function(){
+  loadData(parseInt(this.value));
+});
+
+loadData();
+</script>
+</body>
+</html>
