@@ -18,7 +18,7 @@ I built this dashboard to support the board of my nonprofit organization (I'm He
 | Backend | Node.js, Express |
 | Scraping | Apify (Instagram & LinkedIn actors) |
 | Membership Data | EasyVerein API |
-| Auth | bcrypt + cookie-session |
+| Auth | bcrypt + cookie-session (role-based) |
 | Secrets | Google Cloud Secret Manager |
 | Storage | Google Cloud Storage (production), local JSON (dev) |
 | Hosting | Google Cloud App Engine |
@@ -85,7 +85,8 @@ Required environment variables (see `.env.example`):
 - `INSTAGRAM_USERNAME` — Target Instagram profile
 - `LINKEDIN_COMPANY_URL` — Target LinkedIn company page
 - `EASYVEREIN_SECRET` — EasyVerein API token
-- `DASHBOARD_PASSWORD` — Login password
+- `DASHBOARD_PASSWORD` — Admin login password (full access)
+- `MARKETING_PASSWORD` — Marketing login password (Instagram & LinkedIn only)
 - `SESSION_SECRET` — Cookie signing key
 - `CRON_SECRET` — Shared secret for scheduled jobs
 
@@ -128,7 +129,7 @@ Required environment variables (see `.env.example`):
 - Automated data collection every 2 days with zero manual effort
 - Full monthly rescrape ensures data integrity
 - Sub-second page loads via cached JSON responses
-- Password-protected access for team members only
+- Role-based access: admin sees everything, marketing sees only social media KPIs
 
 ## What I Learned / What's Next
 
@@ -140,4 +141,3 @@ Required environment variables (see `.env.example`):
 **What's next:**
 - Add automated posting to social platforms
 - Add new KPIs
-- Add further authentication method (f.e. clerk)
