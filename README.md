@@ -124,6 +124,29 @@ Required environment variables (see `.env.example`):
 4. Results are cached locally (dev) or in Cloud Storage (prod)
 5. Frontend fetches cached data and renders charts
 
+## Finance KPIs
+
+A dedicated finance analytics page (`/finance`) provides deep insights into the club's financial health, computed from EasyVerein booking data:
+
+**Revenue Diversification** — Automatic classification of all income into:
+- Member Fees (incl. SumUp bulk collections)
+- Sponsoring (invoice-based payments)
+- Travel Deposits (city trips, conferences)
+- Merch (apparel sales)
+
+**Expense Breakdown** — Categorized spending:
+- Stammtische / Food
+- Travel
+- Events (uni camp, sport activities)
+- Subscriptions
+- Merch (production costs)
+
+**Membership Analytics:**
+- Year-over-year member growth with absolute and percentage change
+- Average membership duration (overall, active, resigned)
+
+All KPIs support year selection and show both current-year and all-time splits. Classification is keyword-based on booking descriptions.
+
 ## Results
 
 - Automated data collection every 2 days with zero manual effort
@@ -140,4 +163,5 @@ Required environment variables (see `.env.example`):
 
 **What's next:**
 - Add automated posting to social platforms
-- Add new KPIs
+- Improve expense classification (many debit card entries lack descriptions)
+- Add budget tracking when budget data becomes available
