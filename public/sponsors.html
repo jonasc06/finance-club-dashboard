@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>Finance Club Leipzig – Sponsor Overview</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=JetBrains+Mono:wght@400;500&family=Nunito+Sans:opsz,wght@6..12,400;6..12,500;6..12,600&display=swap" rel="stylesheet"/>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+  <style>
+    :root{--bg:#080b12;--surface:#111827;--surface-2:#1e293b;--border:rgba(148,163,184,.08);--border-2:rgba(148,163,184,.12);--text:#f1f5f9;--text-2:#94a3b8;--text-3:#64748b;--emerald:#10b981;--blue:#38bdf8;--amber:#f59e0b;--purple:#a855f7;--red:#ef4444}
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Nunito Sans',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;
+      background-image:linear-gradient(var(--border) 1px,transparent 1px),linear-gradient(90deg,var(--border) 1px,transparent 1px),radial-gradient(ellipse 60% 40% at 50% 0%,rgba(245,158,11,.06),transparent);
+      background-size:64px 64px,64px 64px,100% 100%;}
+    header{background:var(--surface);border-bottom:1px solid var(--border-2);padding:16px 32px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;position:sticky;top:0;z-index:100;backdrop-filter:blur(12px)}
+    header h1{font-family:'Syne',sans-serif;font-weight:700;font-size:1.2rem;display:flex;align-items:center;gap:10px}
+    header h1 .ic{color:var(--amber)}
+    .back-link{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;color:var(--text-2);border:1px solid var(--border-2);border-radius:8px;font-size:.8rem;text-decoration:none;transition:all .2s}
+    .back-link:hover{background:var(--surface-2);color:var(--text)}
+    .right{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+    select{background:var(--surface-2);color:var(--text);border:1px solid var(--border-2);border-radius:8px;padding:7px 12px;font-family:'Nunito Sans',sans-serif;font-size:.8rem;cursor:pointer}
+    .btn-logout{padding:7px 14px;background:transparent;color:var(--text-3);border:1px solid var(--border-2);border-radius:8px;cursor:pointer;font-size:.78rem;transition:all .2s}
+    .btn-logout:hover{background:var(--surface-2);color:var(--text)}
+    main{padding:32px;max-width:1320px;margin:0 auto}
+    .section-title{font-family:'Syne',sans-serif;font-weight:700;font-size:1.05rem;margin:28px 0 16px;display:flex;align-items:center;gap:10px}
+    .section-title.major{font-size:1.25rem;margin-top:40px;padding-top:24px;border-top:1px solid var(--border-2)}
+    .section-title .period{font-family:'JetBrains Mono',monospace;font-weight:400;font-size:.8rem;color:var(--text-3);background:var(--surface-2);border:1px solid var(--border-2);padding:3px 12px;border-radius:20px;margin-left:auto}
+    .kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(185px,1fr));gap:16px}
+    .kpi-card{background:var(--surface);border:1px solid var(--border-2);border-radius:16px;padding:22px 18px;box-shadow:0 2px 12px rgba(0,0,0,.2);position:relative;overflow:hidden;animation:fadeUp .5s ease both}
+    .kpi-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--accent,var(--amber))}
+    .kpi-card .label{font-size:.65rem;text-transform:uppercase;letter-spacing:.08em;color:var(--text-3);margin-bottom:8px;font-weight:600}
+    .kpi-card .value{font-size:1.7rem;font-weight:500;font-family:'JetBrains Mono',monospace;color:var(--accent,var(--amber))}
+    .kpi-card .sub{font-size:.7rem;color:var(--text-3);margin-top:6px}
+    .charts-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(420px,1fr));gap:20px}
+    .chart-card{background:var(--surface);border:1px solid var(--border-2);border-radius:16px;padding:24px;box-shadow:0 2px 12px rgba(0,0,0,.2);animation:fadeUp .5s ease both}
+    .chart-card h3{font-family:'Syne',sans-serif;font-weight:700;font-size:.95rem;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+    .table-wrap{background:var(--surface);border:1px solid var(--border-2);border-radius:16px;overflow-x:auto;box-shadow:0 2px 12px rgba(0,0,0,.2)}
+    table.spon{width:100%;border-collapse:collapse;font-size:.85rem;min-width:680px}
+    table.spon th,table.spon td{padding:11px 16px;text-align:right;white-space:nowrap;border-bottom:1px solid var(--border)}
+    table.spon thead th{font-size:.66rem;text-transform:uppercase;letter-spacing:.05em;color:var(--text-3);font-weight:700}
+    table.spon tbody tr:hover{background:rgba(245,158,11,.04)}
+    table.spon tbody tr:last-child td{border-bottom:none}
+    table.spon td{font-family:'JetBrains Mono',monospace;color:var(--text-2)}
+    table.spon td.name{font-family:'Nunito Sans',sans-serif;color:var(--text);font-weight:600}
+    table.spon td.rank{color:var(--text-3)}
+    table.spon .total{color:var(--text)}
+    .badge{font-size:.65rem;font-family:'Nunito Sans',sans-serif;padding:3px 9px;border-radius:20px;font-weight:600}
+    .badge.active{background:rgba(16,185,129,.12);color:var(--emerald)}
+    .badge.lapsed{background:rgba(148,163,184,.1);color:var(--text-3)}
+    .badge.recur{background:rgba(56,189,248,.12);color:var(--blue);margin-left:6px}
+    .note{background:var(--surface);border:1px dashed var(--border-2);border-radius:12px;padding:16px 20px;margin-top:16px;font-size:.8rem;color:var(--text-2);line-height:1.5}
+    .note b{color:var(--text)}
+    .note code{font-family:'JetBrains Mono',monospace;font-size:.78rem;color:var(--amber)}
+    .loading{text-align:center;padding:80px;color:var(--text-3);display:flex;flex-direction:column;align-items:center;gap:16px}
+    .loading .spinner{width:32px;height:32px;border:3px solid var(--surface-2);border-top-color:var(--amber);border-radius:50%;animation:spin .8s linear infinite}
+    .err{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.2);color:var(--red);border-radius:12px;padding:20px;margin:20px 0;font-size:.9rem}
+    @keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    @media(max-width:600px){header{padding:14px 16px}main{padding:16px}.charts-grid{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+<header>
+  <a href="/" class="back-link"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg> Menu</a>
+  <h1><span class="ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12v10H4V12"/><path d="M2 7h20v5H2z"/><path d="M12 22V7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg></span> Sponsor Overview</h1>
+  <div class="right">
+    <select id="yearSelect" onchange="loadData(this.value)"></select>
+    <form method="POST" action="/logout" style="margin:0"><button class="btn-logout" type="submit">Logout</button></form>
+  </div>
+</header>
+<main id="app"><div class="loading"><div class="spinner"></div>Loading sponsor data...</div></main>
+<script>
+function fmt(n){if(n==null)return'—';if(n>=1e6)return(n/1e6).toFixed(1)+'M';if(n>=1e3)return(n/1e3).toFixed(1)+'K';return String(n)}
+function pct(n){return n!=null?n.toFixed(1)+'%':'—'}
+function eur(n){if(n==null)return'—';return n.toLocaleString('de-DE',{style:'currency',currency:'EUR',maximumFractionDigits:0})}
+function esc(s){var d=document.createElement('div');d.textContent=s;return d.innerHTML}
+function dShort(s){return s?new Date(s).toLocaleDateString('de-DE',{month:'short',year:'2-digit'}):'—'}
+function dFull(s){return s?new Date(s).toLocaleDateString('de-DE',{day:'2-digit',month:'short',year:'numeric'}):'—'}
+
+var SVG_DOLLAR='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>';
+var SVG_BAR='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></svg>';
+var SVG_LIST='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>';
+var SVG_CAL='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>';
+var SVG_FC='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>';
+
+function render(d){
+  var year=d.current_year;
+  var sponsors=d.sponsors||[];
+  var pays=d.payments_this_year||[];
+  var fc=d.forecast||{items:[],expected_remaining:0,projected_year_end:0};
+  var ongoing=d.is_ongoing_year;
+
+  var html='';
+
+  // ════ THIS YEAR (primary focus) ════
+  html+='<div class="section-title">'+SVG_CAL+' This Year<span class="period">'+year+(ongoing?' · ongoing':'')+'</span></div>';
+  html+='<div class="kpi-grid">';
+  html+='<div class="kpi-card" style="--accent:var(--emerald)"><div class="label">Paid in '+year+'</div><div class="value">'+eur(d.current_year_total)+'</div><div class="sub">'+pays.length+' payments · '+d.sponsors_paid_this_year+' sponsors</div></div>';
+  html+='<div class="kpi-card" style="--accent:var(--blue)"><div class="label">New / Returning</div><div class="value" style="font-size:1.35rem;padding-top:6px">'+(d.new_this_year||0)+' / '+(d.returning_this_year||0)+'</div><div class="sub">sponsors in '+year+'</div></div>';
+  if(ongoing){
+    html+='<div class="kpi-card" style="--accent:var(--amber)"><div class="label">Expected Remaining</div><div class="value">'+eur(fc.expected_remaining)+'</div><div class="sub">from '+fc.items.length+' sponsors (history)</div></div>';
+    html+='<div class="kpi-card" style="--accent:var(--purple)"><div class="label">Projected Year-End</div><div class="value">'+eur(fc.projected_year_end)+'</div><div class="sub">paid + expected</div></div>';
+  }
+  html+='</div>';
+
+  // Payment log — who paid what, when
+  html+='<div class="section-title">'+SVG_CAL+' Payments in '+year+'<span class="period">'+pays.length+' payments</span></div>';
+  if(pays.length){
+    html+='<div class="table-wrap"><table class="spon"><thead><tr><th style="text-align:left">Date</th><th style="text-align:left">Sponsor</th><th>Amount</th></tr></thead><tbody>';
+    pays.forEach(function(p){
+      html+='<tr><td style="text-align:left">'+dFull(p.date)+'</td><td class="name" style="text-align:left">'+esc(p.sponsor)+'</td><td class="total">'+eur(p.amount)+'</td></tr>';
+    });
+    html+='<tr style="border-top:2px solid var(--border-2)"><td style="text-align:left" colspan="2"><b style="color:var(--text)">Total '+year+'</b></td><td class="total"><b>'+eur(d.current_year_total)+'</b></td></tr>';
+    html+='</tbody></table></div>';
+  }else{
+    html+='<div class="note">No sponsoring payments recorded in '+year+' yet.</div>';
+  }
+
+  // Forecast — expected further payments this year
+  if(ongoing&&fc.items&&fc.items.length){
+    html+='<div class="section-title">'+SVG_FC+' Expected Further Payments<span class="period">'+year+' · estimate</span></div>';
+    html+='<div class="table-wrap"><table class="spon"><thead><tr><th style="text-align:left">Sponsor</th><th>Expected</th><th>Typically</th><th>Paid '+year+'</th><th>Last year</th></tr></thead><tbody>';
+    fc.items.forEach(function(f){
+      html+='<tr><td class="name" style="text-align:left">'+esc(f.sponsor)+'</td><td class="total">'+eur(f.expected_remaining)+'</td><td>'+(f.typical_month||'—')+'</td><td>'+(f.paid_this_year?eur(f.paid_this_year):'—')+'</td><td>'+f.last_paid_year+' · '+eur(f.last_paid_amount)+'</td></tr>';
+    });
+    html+='<tr style="border-top:2px solid var(--border-2)"><td style="text-align:left"><b style="color:var(--text)">Expected remaining</b></td><td class="total"><b>'+eur(fc.expected_remaining)+'</b></td><td colspan="3"></td></tr>';
+    html+='</tbody></table></div>';
+    html+='<div class="note"><b>How this is estimated:</b> each recurring, still-active sponsor’s usual annual amount (average of the last ~2 years) minus what they’ve already paid in '+year+'. New or one-off sponsors and lapsed sponsors are not forecast — treat it as a guide, not a commitment.</div>';
+  }
+
+  // ════ ALL-TIME (secondary) ════
+  html+='<div class="section-title major">'+SVG_DOLLAR+' All-Time<span class="period">'+sponsors.length+' partners</span></div>';
+  html+='<div class="kpi-grid">';
+  html+='<div class="kpi-card" style="--accent:var(--amber)"><div class="label">Total Sponsoring</div><div class="value">'+eur(d.total_sponsoring)+'</div><div class="sub">all-time</div></div>';
+  html+='<div class="kpi-card" style="--accent:var(--emerald)"><div class="label">Active Sponsors</div><div class="value">'+fmt(d.active_sponsor_count)+'</div><div class="sub">of '+fmt(d.sponsor_count)+'</div></div>';
+  html+='<div class="kpi-card" style="--accent:var(--purple)"><div class="label">Top Sponsor Share</div><div class="value">'+pct(d.top_sponsor_share)+'</div><div class="sub">'+(sponsors[0]?esc(sponsors[0].name):'—')+'</div></div>';
+  html+='<div class="kpi-card" style="--accent:var(--red)"><div class="label">Concentration</div><div class="value" style="font-size:1.05rem;padding-top:10px">'+esc(d.diversification||'—')+'</div><div class="sub">HHI '+(d.hhi||0)+'</div></div>';
+  html+='</div>';
+
+  html+='<div class="charts-grid" style="margin-top:20px">';
+  html+='<div class="chart-card"><h3>'+SVG_BAR+' Top Sponsors (all-time)</h3><canvas id="cTop"></canvas></div>';
+  html+='<div class="chart-card"><h3>'+SVG_BAR+' Sponsoring per Year</h3><canvas id="cYear"></canvas></div>';
+  html+='</div>';
+
+  html+='<div class="section-title">'+SVG_LIST+' All Sponsors</div>';
+  html+='<div class="table-wrap"><table class="spon"><thead><tr>';
+  html+='<th>#</th><th style="text-align:left">Sponsor</th><th>Total</th><th>'+year+'</th><th>Payments</th><th>Years</th><th>First → Last</th><th style="text-align:left">Status</th>';
+  html+='</tr></thead><tbody>';
+  sponsors.forEach(function(s,i){
+    html+='<tr>';
+    html+='<td class="rank">'+(i+1)+'</td>';
+    html+='<td class="name" style="text-align:left">'+esc(s.name)+'</td>';
+    html+='<td class="total">'+eur(s.total)+'</td>';
+    html+='<td>'+(s.current_year_total?eur(s.current_year_total):'—')+'</td>';
+    html+='<td>'+s.payments+'</td>';
+    html+='<td>'+s.years_active+'</td>';
+    html+='<td>'+dShort(s.first_date)+' → '+dShort(s.last_date)+'</td>';
+    html+='<td style="text-align:left"><span class="badge '+(s.status==='active'?'active':'lapsed')+'">'+s.status+'</span>'+(s.recurring?'<span class="badge recur">recurring</span>':'')+'</td>';
+    html+='</tr>';
+  });
+  html+='</tbody></table></div>';
+
+  if(d.unmatched_receivers&&d.unmatched_receivers.length){
+    html+='<div class="note"><b>'+d.unmatched_receivers.length+' receiver name(s) not yet mapped to a canonical sponsor</b> — grouped by a best-effort fallback. To merge/clean them add an alias to <code>SPONSOR_ALIASES</code> in services/easyverein.js:<br><br>'+d.unmatched_receivers.map(esc).join(' · ')+'</div>';
+  }
+
+  document.getElementById('app').innerHTML=html;
+
+  var top=sponsors.slice(0,10);
+  var elT=document.getElementById('cTop');
+  if(elT&&top.length){
+    new Chart(elT,{type:'bar',data:{labels:top.map(function(s){return s.name}),datasets:[{data:top.map(function(s){return s.total}),backgroundColor:'#f59e0b88',borderColor:'#f59e0b',borderWidth:1,borderRadius:6}]},options:{indexAxis:'y',responsive:true,plugins:{legend:{display:false}},scales:{x:{beginAtZero:true,grid:{color:'rgba(148,163,184,.06)'},ticks:{color:'#64748b',callback:function(v){return v>=1000?(v/1000).toFixed(0)+'k':v}}},y:{grid:{display:false},ticks:{color:'#94a3b8',font:{size:11}}}}}});
+  }
+  var by=d.by_year||[];
+  var elY=document.getElementById('cYear');
+  if(elY&&by.length){
+    new Chart(elY,{type:'bar',data:{labels:by.map(function(y){return y.year}),datasets:[{data:by.map(function(y){return y.total}),backgroundColor:'#10b98188',borderColor:'#10b981',borderWidth:1,borderRadius:6}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{x:{grid:{display:false},ticks:{color:'#64748b'}},y:{beginAtZero:true,grid:{color:'rgba(148,163,184,.06)'},ticks:{color:'#64748b',callback:function(v){return v>=1000?(v/1000).toFixed(0)+'k':v}}}}}});
+  }
+}
+
+async function loadData(year){
+  try{
+    var url='/api/easyverein/sponsors';
+    if(year)url+='?year='+year;
+    var r=await fetch(url);
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    var d=await r.json();
+    var sel=document.getElementById('yearSelect');
+    var years=d.available_years||[];
+    if(sel.options.length===0&&years.length>0){
+      years.slice().reverse().forEach(function(y){
+        var opt=document.createElement('option');opt.value=y;opt.textContent=y;
+        if(y===d.current_year)opt.selected=true;sel.appendChild(opt);
+      });
+    }
+    render(d);
+  }catch(e){
+    document.getElementById('app').innerHTML='<div class="err">'+e.message+'</div>';
+  }
+}
+loadData();
+</script>
+</body>
+</html>

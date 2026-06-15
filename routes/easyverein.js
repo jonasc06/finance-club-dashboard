@@ -29,4 +29,17 @@ router.get('/api/easyverein/finance-kpis', requireRole('admin'), async (req, res
   res.json(data.finance_kpis || {});
 });
 
+router.get('/api/easyverein/sponsors', requireRole('admin'), async (req, res) => {
+  const cache = ev.getCache();
+  if (!cache.lastFetch) {
+    await ev.loadCacheFromDisk();
+  }
+  const data = ev.getCache();
+  if (data._raw_bookings) {
+    const yearParam = parseInt(req.query.year) || null;
+    return res.json(ev.computeSponsors(data._raw_bookings, yearParam));
+  }
+  res.json(data.sponsors || {});
+});
+
 module.exports = router;

@@ -368,6 +368,7 @@ async function fetchData() {
       open_invoices: openInvoicesList.length,
     },
     finance_kpis: financeKpis,
+    sponsors: computeSponsors(enrichedBookings, null),
     _raw_bookings: enrichedBookings,
     _raw_members: members.map(m => ({ joinDate: m.joinDate, resignationDate: m.resignationDate, _isApplication: m._isApplication })),
     insights,
@@ -618,6 +619,197 @@ function computeFinanceKpis(bookings, members, selectedYear) {
   };
 }
 
+// ── Sponsor overview ──────────────────────────────────────────────────────
+//
+// Sponsoring income arrives as bank transfers (no EasyVerein revenue invoices —
+// all invoices are 'expense'), so the only attribution we have is the booking's
+// `receiver` (payer name). The same sponsor shows up under several receiver
+// variants (legal-form suffixes, branch addresses, casing), so we canonicalise.
+
+const MONTH_ABBR = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+// Alias rules: regex on the lower-cased receiver → canonical sponsor name.
+// Extend this list as new sponsors appear (see `unmatched` in the output).
+const SPONSOR_ALIASES = [
+  { re: /pricewaterhouse|\bpwc\b/, name: 'PwC' },
+  { re: /\bkpmg\b/, name: 'KPMG' },
+  { re: /\bdeloitte\b/, name: 'Deloitte' },
+  { re: /landesbank baden|\blbbw\b/, name: 'LBBW' },
+  { re: /unicredit|hypovereinsbank|\bhvb\b/, name: 'UniCredit / HypoVereinsbank' },
+  { re: /spar.?kasse leipzig|kreissparkasse leipzig/, name: 'Sparkasse Leipzig' },
+  { re: /\bsab\b|aufbaubank|foerderbank|förderbank/, name: 'Sächsische Aufbaubank (SAB)' },
+  { re: /pava partners|\bpava\b/, name: 'Pava Partners' },
+  { re: /alte leipziger/, name: 'Alte Leipziger' },
+  { re: /immo hub/, name: 'Immo Hub' },
+  { re: /evergreen/, name: 'Evergreen' },
+  { re: /\bblaid\b/, name: 'BLAID' },
+  { re: /orca capital/, name: 'Orca Capital' },
+  { re: /concentro/, name: 'Concentro' },
+  { re: /falkensteg/, name: 'Falkensteg' },
+  { re: /\bdz bank\b/, name: 'DZ Bank' },
+  { re: /arcus capital/, name: 'ARCUS Capital' },
+];
+
+// Receivers that look like sponsoring income but are not sponsors.
+const SPONSOR_EXCLUDE = [
+  /finance club/, /börsenverein|boersenverein/, /\bbvh\b/, // other clubs / the federation
+];
+
+// Fallback canonicaliser when no alias matches: strip legal forms, addresses and
+// trailing noise so "ACME GmbH Musterstr. 1 04109 Leipzig" → "Acme".
+function normalizeReceiver(raw) {
+  let s = (raw || '').toLowerCase();
+  s = s.replace(/\b(gmbh|ag|se|e\.?\s?v\.?|kg|ohg|mbh|co|kgaa|ug|wirtschaftspr[üu]fungsgesellschaft|wirtschaftspr[üu]fungs|lebensversicherung.*|auf gegenseitigkeit|rechnungswesen.*|c\/o.*)\b/g, ' ');
+  s = s.replace(/\b\d{4,5}\b.*$/, ' ');                 // postal code onwards (address tail)
+  s = s.replace(/\b(str|straße|strasse|weg|platz|allee|pirnaische|heidestr|klingelh|oberursel|m[üu]nchen|dresden|leipzig|frankfurt|stuttgart)\b.*$/, ' ');
+  s = s.replace(/[^a-zäöüß0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
+  const words = s.split(' ').filter(Boolean).slice(0, 3).join(' ');
+  return words ? words.replace(/\b\w/g, c => c.toUpperCase()) : (raw || '(unknown)').trim();
+}
+
+function canonicalSponsor(receiver) {
+  const r = (receiver || '').toLowerCase();
+  for (const a of SPONSOR_ALIASES) if (a.re.test(r)) return { name: a.name, matched: true };
+  return { name: normalizeReceiver(receiver), matched: false };
+}
+
+function isSponsorExcluded(receiver) {
+  const r = (receiver || '').toLowerCase();
+  return SPONSOR_EXCLUDE.some(re => re.test(r));
+}
+
+function computeSponsors(bookings, selectedYear) {
+  const now = new Date();
+  const years = [...new Set((bookings || []).filter(b => b.date).map(b => parseInt(b.date.slice(0, 4))))].sort();
+  const currentYear = selectedYear || (years.length ? years[years.length - 1] : now.getFullYear());
+
+  // Only income bookings the classifier tags as sponsoring, excluding non-sponsors.
+  const sponsorBookings = (bookings || []).filter(b =>
+    parseFloat(b.amount) > 0 &&
+    classifyBooking(b, 'income') === 'sponsoring' &&
+    !isSponsorExcluded(b.receiver)
+  );
+
+  const map = {};               // canonical name → aggregate
+  const unmatched = new Set();  // receivers that fell through to the fallback
+  const allPayments = [];       // every individual sponsoring payment
+  for (const b of sponsorBookings) {
+    const amt = parseFloat(b.amount);
+    const { name, matched } = canonicalSponsor(b.receiver);
+    if (!matched && b.receiver) unmatched.add(b.receiver.trim());
+    const y = b.date ? parseInt(b.date.slice(0, 4)) : null;
+    const mo = b.date ? parseInt(b.date.slice(5, 7)) - 1 : null;
+    const s = map[name] || (map[name] = { name, total: 0, payments: 0, first: null, last: null, years: new Set(), byYear: {}, months: {}, matched });
+    s.total += amt;
+    s.payments += 1;
+    if (y != null) { s.years.add(y); s.byYear[y] = (s.byYear[y] || 0) + amt; }
+    if (mo != null) s.months[mo] = (s.months[mo] || 0) + 1;
+    if (b.date) {
+      if (!s.first || b.date < s.first) s.first = b.date;
+      if (!s.last || b.date > s.last) s.last = b.date;
+    }
+    allPayments.push({ name, amount: Math.round(amt * 100) / 100, date: b.date || '', year: y, month: mo });
+  }
+
+  const sponsors = Object.values(map).map(s => {
+    const lastYear = s.last ? parseInt(s.last.slice(0, 4)) : 0;
+    return {
+      name: s.name,
+      total: Math.round(s.total * 100) / 100,
+      payments: s.payments,
+      first_date: s.first,
+      last_date: s.last,
+      years_active: s.years.size,
+      recurring: s.years.size >= 2,
+      status: lastYear >= currentYear - 1 ? 'active' : 'lapsed',
+      current_year_total: Math.round((s.byYear[currentYear] || 0) * 100) / 100,
+      auto_matched: s.matched,
+    };
+  }).sort((a, b) => b.total - a.total);
+
+  const grandTotal = sponsors.reduce((s, x) => s + x.total, 0);
+  const activeSponsors = sponsors.filter(s => s.status === 'active');
+  const topShare = grandTotal > 0 && sponsors.length ? Math.round(sponsors[0].total / grandTotal * 10000) / 100 : 0;
+  const hhi = grandTotal > 0 ? Math.round(sponsors.reduce((s, x) => s + Math.pow(x.total / grandTotal * 100, 2), 0)) : 0;
+  const diversification = hhi === 0 ? '—' : hhi < 1500 ? 'Well diversified' : hhi < 2500 ? 'Moderately concentrated' : 'Highly concentrated';
+
+  // Per-year sponsoring totals (for the trend chart)
+  const byYear = years.map(y => ({
+    year: y,
+    total: Math.round(sponsorBookings.filter(b => b.date && b.date.startsWith(String(y)))
+      .reduce((s, b) => s + parseFloat(b.amount), 0) * 100) / 100,
+  }));
+
+  // New vs returning in the current year
+  const currentYearSponsors = sponsors.filter(s => (s.current_year_total || 0) > 0);
+  const newThisYear = currentYearSponsors.filter(s => s.first_date && s.first_date.startsWith(String(currentYear)));
+
+  // ── Current-year payment log (who paid what, when) ──
+  const paymentsThisYear = allPayments
+    .filter(p => p.year === currentYear)
+    .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0))
+    .map(p => ({ sponsor: p.name, amount: p.amount, date: p.date, month: p.month != null ? MONTH_ABBR[p.month] : '' }));
+  const currentYearTotal = Math.round(paymentsThisYear.reduce((s, p) => s + p.amount, 0) * 100) / 100;
+  const sponsorsPaidThisYear = new Set(paymentsThisYear.map(p => p.sponsor)).size;
+
+  // ── Forecast — expected further payments this year, learned from history ──
+  // For each recurring, still-active sponsor we estimate their usual annual
+  // contribution (avg of up to the 2 most recent prior years) and subtract what
+  // they've already paid this year. Naive but explainable; new/lapsed sponsors
+  // and one-offs are not forecast.
+  const forecastItems = [];
+  for (const s of Object.values(map)) {
+    const prior = [...s.years].filter(y => y < currentYear).sort((a, b) => b - a);
+    if (!prior.length) continue;              // never paid before this year → can't forecast
+    if (prior[0] < currentYear - 1) continue; // lapsed (no payment in the last full year) → don't expect
+    const base = prior.slice(0, 2);
+    const expectedAnnual = base.reduce((sum, y) => sum + s.byYear[y], 0) / base.length;
+    const paid = s.byYear[currentYear] || 0;
+    const expectedRemaining = Math.max(0, expectedAnnual - paid);
+    if (expectedRemaining < 1) continue;      // already gave their usual amount this year
+    let typMonth = null, best = -1;
+    for (const [m, c] of Object.entries(s.months)) { if (c > best) { best = c; typMonth = parseInt(m); } }
+    forecastItems.push({
+      sponsor: s.name,
+      expected_remaining: Math.round(expectedRemaining * 100) / 100,
+      expected_annual: Math.round(expectedAnnual * 100) / 100,
+      paid_this_year: Math.round(paid * 100) / 100,
+      typical_month: typMonth != null ? MONTH_ABBR[typMonth] : null,
+      last_paid_year: prior[0],
+      last_paid_amount: Math.round((s.byYear[prior[0]] || 0) * 100) / 100,
+    });
+  }
+  forecastItems.sort((a, b) => b.expected_remaining - a.expected_remaining);
+  const expectedRemainingTotal = Math.round(forecastItems.reduce((s, x) => s + x.expected_remaining, 0) * 100) / 100;
+
+  return {
+    current_year: currentYear,
+    available_years: years,
+    is_ongoing_year: currentYear === now.getFullYear(),
+    // current-year focus
+    current_year_total: currentYearTotal,
+    payments_this_year: paymentsThisYear,
+    sponsors_paid_this_year: sponsorsPaidThisYear,
+    new_this_year: newThisYear.length,
+    returning_this_year: currentYearSponsors.length - newThisYear.length,
+    forecast: {
+      expected_remaining: expectedRemainingTotal,
+      projected_year_end: Math.round((currentYearTotal + expectedRemainingTotal) * 100) / 100,
+      items: forecastItems,
+    },
+    // all-time (secondary)
+    total_sponsoring: Math.round(grandTotal * 100) / 100,
+    sponsor_count: sponsors.length,
+    active_sponsor_count: activeSponsors.length,
+    top_sponsor_share: topShare,
+    hhi,
+    diversification,
+    sponsors,
+    by_year: byYear,
+    unmatched_receivers: [...unmatched].sort(),
+  };
+}
+
 // ── Refresh ──
 
 async function refreshCache() {
@@ -634,4 +826,4 @@ async function refreshCache() {
   }
 }
 
-module.exports = { getCache, loadCacheFromDisk, refreshCache, loadHistory, computeFinanceKpis };
+module.exports = { getCache, loadCacheFromDisk, refreshCache, loadHistory, computeFinanceKpis, computeSponsors };

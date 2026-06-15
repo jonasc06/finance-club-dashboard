@@ -32,6 +32,7 @@
     .card-2{animation:fadeUp .5s ease .4s both}
     .card-3{animation:fadeUp .5s ease .5s both}
     .card-4{animation:fadeUp .5s ease .6s both}
+    .card-5{animation:fadeUp .5s ease .7s both}
     .platform-header{display:flex;align-items:center;gap:14px}
     .platform-icon{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
     .platform-name{font-family:'Syne',sans-serif;font-size:1.15rem;font-weight:700}
@@ -120,7 +121,19 @@
       <div class="view-link">View Dashboard <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></div>
     </a>
 
-    <a href="/finance" id="finCard" class="platform-card card-4" style="--card-accent:#38bdf8">
+    <a href="/sponsors" id="sponCard" class="platform-card card-4" style="--card-accent:#f59e0b">
+      <div class="platform-header">
+        <div class="platform-icon" style="background:rgba(245,158,11,.1);color:#f59e0b">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12v10H4V12"/><path d="M2 7h20v5H2z"/><path d="M12 22V7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>
+        </div>
+        <span class="platform-name">Sponsors</span>
+        <span class="platform-tag" style="background:rgba(245,158,11,.1);color:#f59e0b">Partners</span>
+      </div>
+      <div id="sponKpis" class="loading-mini">Loading...</div>
+      <div class="view-link">View Dashboard <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></div>
+    </a>
+
+    <a href="/finance" id="finCard" class="platform-card card-5" style="--card-accent:#38bdf8">
       <div class="platform-header">
         <div class="platform-icon" style="background:rgba(56,189,248,.1);color:#38bdf8">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
@@ -208,6 +221,23 @@ async function loadFinanceCard(){
   }
 }
 
+async function loadSponsorCard(){
+  try{
+    var r=await fetch('/api/easyverein/sponsors');
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    var d=await r.json();
+    var el=document.getElementById('sponKpis');
+    el.innerHTML=
+      '<div class="kpi-row">'+
+      '<div class="mini-kpi"><div class="val">'+eur(d.total_sponsoring)+'</div><div class="lbl">All-time</div></div>'+
+      '<div class="mini-kpi"><div class="val">'+fmt(d.active_sponsor_count)+'</div><div class="lbl">Active</div></div>'+
+      '<div class="mini-kpi"><div class="val">'+pct(d.top_sponsor_share)+'</div><div class="lbl">Top share</div></div>'+
+      '</div>';
+  }catch(e){
+    document.getElementById('sponKpis').innerHTML='<span style="color:var(--text-3)">No data yet</span>';
+  }
+}
+
 async function init() {
   let role = 'admin';
   try {
@@ -221,6 +251,8 @@ async function init() {
     if (evCard) evCard.remove();
     const finCard = document.getElementById('finCard');
     if (finCard) finCard.remove();
+    const sponCard = document.getElementById('sponCard');
+    if (sponCard) sponCard.remove();
   }
 
   loadCard('/api/kpis', 'igKpis', 'ig');
@@ -229,6 +261,7 @@ async function init() {
   if (role === 'admin') {
     loadCard('/api/easyverein/kpis', 'evKpis', 'ev');
     loadFinanceCard();
+    loadSponsorCard();
   }
 }
 init();

@@ -70,7 +70,7 @@ async function start() {
 
   // ── Block direct static access to admin-only pages ──
   app.use((req, res, next) => {
-    if ((req.path === '/easyverein.html' || req.path === '/finance.html') && req.session?.role && req.session.role !== 'admin') {
+    if ((req.path === '/easyverein.html' || req.path === '/finance.html' || req.path === '/sponsors.html') && req.session?.role && req.session.role !== 'admin') {
       return res.status(403).send('Access denied');
     }
     next();

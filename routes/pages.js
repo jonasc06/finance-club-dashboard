@@ -28,4 +28,8 @@ router.get('/finance', requireRole('admin'), (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'finance.html'));
 });
 
+router.get('/sponsors', requireRole('admin'), (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'sponsors.html'));
+});
+
 module.exports = router;
