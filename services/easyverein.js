@@ -43,21 +43,38 @@ async function apiAllPages(endpoint, params = {}) {
 }
 
 // ── Token refresh ──
+//
+// EasyVerein API v2.0 replaced non-expiring keys with tokens that expire after 30 days.
+// The API signals an upcoming expiry via a response header *while the token is still
+// valid*; we rotate then. An already-expired token returns 401 and CANNOT refresh itself,
+// so this must run proactively (the bi-daily cron runs well inside the 30-day window).
+async function refreshTokenIfSignaled(headers = {}) {
+  // Log token-related headers so the exact signal name can be confirmed from prod logs.
+  const related = Object.keys(headers).filter(k => /token|refresh/i.test(k));
+  if (related.length) {
+    console.log('[EasyVerein] token-related response headers:', related.map(k => `${k}=${headers[k]}`).join(', '));
+  }
 
-async function refreshTokenIfNeeded() {
+  const isTruthy = v => v !== undefined && v !== null && v !== '' &&
+    !['false', '0', 'no'].includes(String(v).toLowerCase());
+  const needsRefresh = ['tokenrefreshneeded', 'token-refresh-needed', 'x-token-refresh-needed']
+    .some(k => isTruthy(headers[k]));
+  if (!needsRefresh) return;
+
   try {
-    const { data } = await axios.post(`${BASE_URL}/refresh-token`, null, {
+    const { data } = await axios.get(`${BASE_URL}/refresh-token`, {
       headers: { Authorization: `Bearer ${config.EASYVEREIN_TOKEN}` },
       timeout: 15000,
     });
-    if (data.token) {
-      await updateSecret('EASYVEREIN_SECRET', data.token);
+    const newToken = data?.token || data?.access_token || data?.bearer || data?.key;
+    if (newToken) {
+      await updateSecret('EASYVEREIN_SECRET', newToken);
       console.log('[EasyVerein] Token refreshed and saved to Secret Manager');
+    } else {
+      console.warn('[EasyVerein] Refresh returned no recognizable token field; keys:', Object.keys(data || {}).join(','));
     }
   } catch (err) {
-    if (err.response?.status !== 405) {
-      console.warn('[EasyVerein] Token refresh failed:', err.message);
-    }
+    console.warn('[EasyVerein] Token refresh failed:', err.response?.status || err.message);
   }
 }
 
@@ -119,35 +136,35 @@ function getCache() { return cache; }
 async function fetchData() {
   console.log('[EasyVerein] Fetching data from API...');
 
-  await refreshTokenIfNeeded();
+  // Track auth failures so we never overwrite good data with zeros (see refreshCache).
+  let authFailed = false;
+  const onFail = (label, fallback) => (err) => {
+    const status = err.response?.status;
+    if (status === 401 || status === 403) authFailed = true;
+    console.warn(`[EasyVerein] ${label} fetch failed:`, err.message);
+    return fallback;
+  };
 
   // Fetch all data sources in parallel
   const [orgRes, members, invoices, inventoryItems, memberGroups, bookings] = await Promise.all([
-    api('organization').catch(err => {
-      console.warn('[EasyVerein] Organization fetch failed:', err.message);
-      return { data: {} };
-    }),
-    apiAllPages('member', { query: '{id,joinDate,resignationDate,_isApplication}' }).catch(err => {
-      console.warn('[EasyVerein] Members fetch failed:', err.message);
-      return [];
-    }),
-    apiAllPages('invoice', { query: '{id,charges,date,dateSent,relatedBookings,isDraft,canceledInvoice,isRequest,totalPrice}' }).catch(err => {
-      console.warn('[EasyVerein] Invoices fetch failed:', err.message);
-      return [];
-    }),
-    apiAllPages('inventory-object').catch(err => {
-      console.warn('[EasyVerein] Inventory fetch failed:', err.message);
-      return [];
-    }),
-    apiAllPages('member-group', { query: '{id,name,short,linkedItems}' }).catch(err => {
-      console.warn('[EasyVerein] Member groups fetch failed:', err.message);
-      return [];
-    }),
-    apiAllPages('booking', { query: '{id,amount,date,description}' }).catch(err => {
-      console.warn('[EasyVerein] Bookings fetch failed:', err.message);
-      return [];
-    }),
+    api('organization').catch(onFail('Organization', { data: {} })),
+    apiAllPages('member', { query: '{id,joinDate,resignationDate,_isApplication}' }).catch(onFail('Members', [])),
+    apiAllPages('invoice', { query: '{id,charges,date,dateSent,relatedBookings,isDraft,canceledInvoice,isRequest,totalPrice}' }).catch(onFail('Invoices', [])),
+    apiAllPages('inventory-object').catch(onFail('Inventory', [])),
+    apiAllPages('member-group', { query: '{id,name,short,linkedItems}' }).catch(onFail('Member groups', [])),
+    apiAllPages('booking', { query: '{id,amount,date,description}' }).catch(onFail('Bookings', [])),
   ]);
+
+  // Abort on auth failure — do NOT compute zeros, pollute history, or overwrite the cache.
+  // (This is what turned an expired token into a silent all-zero dashboard.)
+  if (authFailed) {
+    const err = new Error('EasyVerein authentication failed (HTTP 401/403) — token expired or invalid');
+    err.isAuthError = true;
+    throw err;
+  }
+
+  // Token still valid here — rotate it now if the API signaled an upcoming expiry.
+  await refreshTokenIfSignaled(orgRes?.headers);
 
   // ── Organization ──
   const org = orgRes.data?.results?.[0] || orgRes.data || {};
@@ -485,13 +502,15 @@ function computeFinanceKpis(bookings, members, selectedYear) {
 
 async function refreshCache() {
   try {
+    // fetchData throws on auth failure, so neither the in-memory cache nor the GCS/disk
+    // copy is touched — the last good snapshot is preserved instead of zeroed out.
     cache = await fetchData();
     await saveCacheToDisk();
     console.log(`[EV Cache] Updated at ${cache.lastFetch}`);
     return { ok: true, lastFetch: cache.lastFetch };
   } catch (err) {
     console.error('[EV Cache] Error:', err.response?.data || err.message);
-    return { ok: false, error: err.message };
+    return { ok: false, error: err.message, authError: !!err.isAuthError };
   }
 }
 
