@@ -393,7 +393,7 @@ async function fetchData() {
 function isReconciliation(b) {
   const t = ((b.receiver || '') + ' ' + (b.description || '')).toLowerCase();
   if (/auslage/.test(t)) return false;
-  return /rücklastschrift|ruecklastschrift|lastschriftr|lastschrift zurück|storno|retoure|chargeback|rückbuchung|rueckbuchung|zurückgebucht|zurueckgebucht|\breject\b|konto.*(aufgel|erlosch)|erloschen|ungültige? iban|ungueltige? iban|fehlerhaft|rückerstattung|rueckerstattung|rücküberweisung|rueckueberweisung|\berstattung\b/.test(t);
+  return /rücklastschrift|ruecklastschrift|lastschriftr|lastschrift zurück|storno|retoure|chargeback|rückbuchung|rueckbuchung|zurückgebucht|zurueckgebucht|\breject\b|konto.*(aufgel|erlosch)|erloschen|ungültige? iban|ungueltige? iban|fehlerhaft|rückerstattung|rueckerstattung|rücküberweisung|rueckueberweisung|\berstattung\b|kontoübertrag|kontouebertrag|kontoubertrag|eigenübertrag|umbuchung/.test(t);
 }
 
 // Tier 1 — map a billing-account (Sachkonto) name to our category, per side.
@@ -450,11 +450,11 @@ function keywordIncome(text, amount) {
   return null;
 }
 function keywordExpense(text) {
-  if (/stammtisch|flaschenpost|pizzeria|lieferando|dominos|\baldi\b|\brewe\b|\blidl\b|edeka|netto|kaufland|penny|getränke|getraenke|bäckerei|baeckerei|restaurant|mensa|metro|gastro/i.test(text)) return 'stammtisch';
-  if (/fahrt|reise|zugfahrt|anreise|fahrtkost|münchen|muenchen|munich|wien|frankfurt|ffm|hotel|booking\.com|airbnb|unterkunft|öpnv|oepnv|ticket|kaution|pfand|deutsche bahn|\bdb\b|db vertrieb|flixbus|\bflix\b|\bmvg\b|\blvb\b|uber|bolt|nextbike/i.test(text)) return 'travel';
-  if (/event|sommerfest|konferenz|strategieevent|jubiläum|jubilaeum|uni\s*camp|paintball|padel|bowling|klettern|laser|escape|grillen|weihnachtsfeier/i.test(text)) return 'events';
+  if (/stammtisch|flaschenpost|pizzeria|lieferando|dominos|\baldi\b|\brewe\b|\blidl\b|edeka|netto|kaufland|penny|getränke|getraenke|bäckerei|baeckerei|restaurant|mensa|metro|gastro|peter pane|crazy rice|vapiano|sausalitos|burgerme|han ware|sushi|kfc|mcdonald|burger king|subway/i.test(text)) return 'stammtisch';
+  if (/fahrt|reise|zugfahrt|anreise|fahrtkost|münchen|muenchen|munich|wien|frankfurt|ffm|hotel|booking\.com|airbnb|unterkunft|öpnv|oepnv|ticket|kaution|pfand|deutsche bahn|\bdb\b|db vertrieb|flixbus|\bflix\b|\bmvg\b|\blvb\b|uber|bolt|nextbike|new\s*york|\bnyc\b|hospitality|arabella|\bniu\b/i.test(text)) return 'travel';
+  if (/event|sommerfest|konferenz|strategieevent|jubiläum|jubilaeum|uni\s*camp|paintball|padel|bowling|klettern|laser|escape|grillen|weihnachtsfeier|kulturamt|stadt.*leipzig.*veranst/i.test(text)) return 'events';
   if (/alleaktien|easyverein|canva|zoom|notion|stripe|spotify|bvh|openai|claude|anthropic|ionos|github|adobe|figma|microsoft|google|telekom|vodafone|\baws\b|hetzner|mailchimp|slack/i.test(text)) return 'subscriptions';
-  if (/polo|hoodie|t-shirt|quarter\s*zip|pullover|jacke|pulli|merch|sticker|stick(?:er)?.*datum|banner|spreadshirt|stickerapp/i.test(text)) return 'merch';
+  if (/polo|hoodie|t-shirt|quarter\s*zip|pullover|jacke|pulli|merch|sticker|stick(?:er)?.*datum|banner|spreadshirt|stickerapp|tyrwhitt|11teamsports|teamsport/i.test(text)) return 'merch';
   if (/amazon|amzn|vistaprint|druck|flyer|\bprint\b|büro|buero|porto|stationery|office|saturn|mediamarkt|conrad/i.test(text)) return 'supplies';
   return null;
 }
