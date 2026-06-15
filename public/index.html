@@ -61,9 +61,15 @@
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
     <h1>Finance Club Leipzig</h1>
   </div>
-  <form method="POST" action="/logout" style="margin:0">
-    <button class="btn-logout" type="submit">Logout</button>
-  </form>
+  <div style="display:flex;align-items:center;gap:12px">
+    <a href="/report" id="reportBtn" style="display:none;align-items:center;gap:8px;padding:8px 16px;background:linear-gradient(135deg,#10b981,#059669);color:#fff;border-radius:8px;font-size:.8rem;font-weight:600;text-decoration:none;font-family:'Syne',sans-serif">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      Board Report
+    </a>
+    <form method="POST" action="/logout" style="margin:0">
+      <button class="btn-logout" type="submit">Logout</button>
+    </form>
+  </div>
 </header>
 <main>
   <div class="hero-icon">
@@ -259,6 +265,8 @@ async function init() {
   loadCard('/api/linkedin/kpis', 'liKpis', 'li');
   loadCard('/api/tiktok/kpis', 'ttKpis', 'tt');
   if (role === 'admin') {
+    const reportBtn = document.getElementById('reportBtn');
+    if (reportBtn) reportBtn.style.display = 'inline-flex';
     loadCard('/api/easyverein/kpis', 'evKpis', 'ev');
     loadFinanceCard();
     loadSponsorCard();

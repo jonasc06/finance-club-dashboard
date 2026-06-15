@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>Finance Club Leipzig – Board Report</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=JetBrains+Mono:wght@400;500&family=Nunito+Sans:opsz,wght@6..12,400;6..12,500;6..12,600&display=swap" rel="stylesheet"/>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+  <style>
+    :root{--bg:#080b12;--surface:#111827;--surface-2:#1e293b;--border-2:rgba(148,163,184,.12);--text:#f1f5f9;--text-2:#94a3b8;--text-3:#64748b;--emerald:#10b981;--amber:#f59e0b}
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Nunito Sans',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;
+      background-image:radial-gradient(ellipse 60% 40% at 50% 0%,rgba(16,185,129,.06),transparent)}
+    header{background:var(--surface);border-bottom:1px solid var(--border-2);padding:16px 32px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+    header h1{font-family:'Syne',sans-serif;font-weight:700;font-size:1.2rem;display:flex;align-items:center;gap:10px}
+    header h1 .ic{color:var(--emerald)}
+    .back-link{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;color:var(--text-2);border:1px solid var(--border-2);border-radius:8px;font-size:.8rem;text-decoration:none}
+    .back-link:hover{background:var(--surface-2);color:var(--text)}
+    main{max-width:680px;margin:0 auto;padding:48px 24px}
+    .card{background:var(--surface);border:1px solid var(--border-2);border-radius:18px;padding:40px;box-shadow:0 8px 32px rgba(0,0,0,.3)}
+    .card h2{font-family:'Syne',sans-serif;font-size:1.5rem;margin-bottom:8px}
+    .card p.lead{color:var(--text-2);font-size:.95rem;margin-bottom:28px;line-height:1.55}
+    .toc{list-style:none;margin-bottom:32px}
+    .toc li{display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid rgba(148,163,184,.08);font-size:.92rem;color:var(--text-2)}
+    .toc li .num{width:26px;height:26px;border-radius:8px;background:var(--surface-2);display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:.78rem;color:var(--emerald);flex-shrink:0}
+    .toc li b{color:var(--text);font-weight:600}
+    .toc li.fin .num{color:var(--amber)}
+    .btn{display:inline-flex;align-items:center;gap:10px;width:100%;justify-content:center;padding:16px 24px;background:linear-gradient(135deg,#10b981,#059669);color:#fff;border:none;border-radius:12px;font-family:'Syne',sans-serif;font-weight:700;font-size:1rem;cursor:pointer;transition:transform .15s,box-shadow .15s}
+    .btn:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(16,185,129,.3)}
+    .btn:disabled{opacity:.6;cursor:not-allowed;transform:none;box-shadow:none}
+    .status{margin-top:20px;text-align:center;font-size:.88rem;color:var(--text-3);min-height:22px;font-family:'JetBrains Mono',monospace}
+    .status.err{color:#ef4444}
+    .status.ok{color:var(--emerald)}
+    .spin{display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:s .7s linear infinite;vertical-align:-2px;margin-right:6px}
+    @keyframes s{to{transform:rotate(360deg)}}
+    #sandbox{position:fixed;left:-9999px;top:0}
+  </style>
+</head>
+<body>
+<header>
+  <a href="/" class="back-link"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg> Menu</a>
+  <h1><span class="ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></span> Board Report</h1>
+  <form method="POST" action="/logout" style="margin:0"><button class="back-link" type="submit" style="cursor:pointer;background:none">Logout</button></form>
+</header>
+<main>
+  <div class="card">
+    <h2>Board Meeting Report</h2>
+    <p class="lead">Generates a printable PDF summarising the club's KPIs for the next board meeting. Financials are placed on the final, separate page.</p>
+    <ul class="toc">
+      <li><span class="num">1</span> <b>Social Media</b> — Instagram, LinkedIn & TikTok reach, growth, engagement</li>
+      <li><span class="num">2</span> <b>Membership</b> — count, year-over-year, new members, tenure</li>
+      <li><span class="num">3</span> <b>Sponsors</b> — paid this year, projected year-end, top partners</li>
+      <li class="fin"><span class="num">4</span> <b>Financials</b> — income, expenses, net & splits <i>(final page)</i></li>
+    </ul>
+    <button class="btn" id="genBtn" onclick="generate()">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      Generate &amp; Download PDF
+    </button>
+    <div class="status" id="status"></div>
+  </div>
+</main>
+<div id="sandbox"></div>
+<script>
+var EM=[16,185,129], AM=[245,158,11], BL=[56,189,248], PU=[168,85,247], RD=[239,68,68], DK=[17,24,39], GR=[100,116,139], LN=[226,232,240], BG=[248,250,252];
+function setStatus(msg,cls){var e=document.getElementById('status');e.className='status'+(cls?' '+cls:'');e.innerHTML=(cls==='wait'?'<span class="spin"></span>':'')+msg;}
+function eur(n){if(n==null)return'—';return n.toLocaleString('de-DE',{style:'currency',currency:'EUR',maximumFractionDigits:0});}
+function fmt(n){if(n==null)return'—';if(n>=1e6)return(n/1e6).toFixed(1)+'M';if(n>=1e3)return(n/1e3).toFixed(1)+'K';return String(n);}
+function pct(n){return n!=null?n.toFixed(1)+'%':'—';}
+// jsPDF's built-in fonts can't render emoji/symbols (they come out as garbage),
+// so keep only printable ASCII + Latin-1/Extended + the Euro sign, collapse
+// whitespace (newlines included), and trim.
+function cleanCap(s,max){
+  var t=String(s||'').replace(/\s+/g,' ').replace(/[^\x20-\x7E\u00A0-\u024F\u20AC]/g,'').replace(/\s+/g,' ').trim();
+  if(!t)return '—';
+  max=max||64;
+  return t.length>max?t.slice(0,max-1).trim()+'...':t;
+}
+function ymd(){var d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');}
+async function getJSON(u){try{var r=await fetch(u);if(!r.ok)return null;return await r.json();}catch(e){return null;}}
+
+// Render a Chart.js config to a PNG data URL (off-screen, no animation).
+function chartImage(cfg,w,h){
+  return new Promise(function(resolve){
+    var c=document.createElement('canvas');c.width=w;c.height=h;
+    document.getElementById('sandbox').appendChild(c);
+    cfg.options=cfg.options||{};cfg.options.animation=false;cfg.options.responsive=false;cfg.options.devicePixelRatio=1.5;
+    // Paint a white background so the JPEG export isn't transparent→black.
+    cfg.plugins=(cfg.plugins||[]).concat([{id:'wbg',beforeDraw:function(ch){var x=ch.ctx;x.save();x.fillStyle='#ffffff';x.fillRect(0,0,ch.width,ch.height);x.restore();}}]);
+    var ch=new Chart(c,cfg);
+    requestAnimationFrame(function(){
+      var url;try{url=ch.toBase64Image('image/jpeg',0.9);}catch(e){url=null;}
+      ch.destroy();c.remove();resolve(url);
+    });
+  });
+}
+
+// ── PDF building helpers ──
+function header(doc,title,sub,accent){
+  doc.setFillColor.apply(doc,accent);doc.rect(0,0,210,4,'F');
+  doc.setTextColor.apply(doc,DK);doc.setFont('helvetica','bold');doc.setFontSize(20);
+  doc.text(title,15,21);
+  if(sub){doc.setFont('helvetica','normal');doc.setFontSize(10);doc.setTextColor.apply(doc,GR);doc.text(sub,15,28);}
+  doc.setDrawColor.apply(doc,LN);doc.setLineWidth(.3);doc.line(15,32,195,32);
+}
+function kpiBoxes(doc,y,items){
+  var n=items.length,gap=4,w=(180-(n-1)*gap)/n,h=25,x=15;
+  items.forEach(function(it){
+    doc.setDrawColor.apply(doc,LN);doc.setFillColor.apply(doc,BG);doc.roundedRect(x,y,w,h,2,2,'FD');
+    if(it.accent){doc.setFillColor.apply(doc,it.accent);doc.rect(x,y,w,1.2,'F');}
+    doc.setFontSize(7);doc.setTextColor.apply(doc,GR);doc.setFont('helvetica','bold');
+    doc.text(String(it.label).toUpperCase(),x+4,y+7,{maxWidth:w-8});
+    doc.setFontSize(it.small?11:14);doc.setTextColor.apply(doc,DK);doc.setFont('helvetica','bold');
+    doc.text(String(it.value),x+4,y+15.5,{maxWidth:w-8});
+    if(it.sub){doc.setFontSize(7);doc.setFont('helvetica','normal');doc.setTextColor.apply(doc,GR);doc.text(String(it.sub),x+4,y+21,{maxWidth:w-8});}
+    x+=w+gap;
+  });
+  return y+h+8;
+}
+function sectionLabel(doc,y,txt){doc.setFont('helvetica','bold');doc.setFontSize(11);doc.setTextColor.apply(doc,DK);doc.text(txt,15,y);return y+3;}
+
+// ── Pages ──
+function coverPage(doc,fin){
+  doc.setFillColor(8,11,18);doc.rect(0,0,210,297,'F');
+  doc.setFillColor.apply(doc,EM);doc.rect(0,128,210,1.4,'F');
+  doc.setTextColor(255,255,255);doc.setFont('helvetica','bold');doc.setFontSize(30);
+  doc.text('Finance Club Leipzig',105,108,{align:'center'});
+  doc.setFontSize(15);doc.setTextColor.apply(doc,AM);
+  doc.text('BOARD REPORT',105,122,{align:'center'});
+  doc.setFont('helvetica','normal');doc.setFontSize(11);doc.setTextColor(148,163,184);
+  if(fin&&fin.current_year)doc.text('Financial year '+fin.current_year,105,145,{align:'center'});
+  doc.text('Generated '+new Date().toLocaleDateString('de-DE',{day:'2-digit',month:'long',year:'numeric'}),105,153,{align:'center'});
+  doc.setFontSize(8);doc.setTextColor(100,116,139);
+  doc.text('Confidential — for internal board use only',105,280,{align:'center'});
+}
+
+// Build a unified multi-platform follower-growth line config from each
+// platform's follower_count history (dates merged + forward-filled).
+function followerGrowthConfig(ig,li,tt){
+  function series(d){
+    if(!d||!d.insights)return null;
+    var m=d.insights.find(function(i){return i.name==='follower_count';});
+    if(!m||!m.values||!m.values.length)return null;
+    return {dates:m.values.map(function(v){return v.end_time.slice(0,10);}),data:m.values.map(function(v){return v.value||0;})};
+  }
+  var src=[['Instagram','#E1306C',series(ig)],['LinkedIn','#0a66c2',series(li)],['TikTok','#14b8a6',series(tt)]].filter(function(x){return x[2];});
+  if(!src.length)return null;
+  var dset={};src.forEach(function(x){x[2].dates.forEach(function(d){dset[d]=1;});});
+  var dates=Object.keys(dset).sort();
+  if(dates.length<2)return null;
+  var datasets=src.map(function(x){
+    var map={};x[2].dates.forEach(function(d,i){map[d]=x[2].data[i];});
+    var last=null;var data=dates.map(function(d){if(map[d]!=null)last=map[d];return last;});
+    return {label:x[0],data:data,borderColor:x[1],backgroundColor:'transparent',tension:.3,pointRadius:0,borderWidth:2,spanGaps:true};
+  });
+  var labels=dates.map(function(d){return new Date(d).toLocaleDateString('de-DE',{day:'2-digit',month:'short'});});
+  return {type:'line',data:{labels:labels,datasets:datasets},options:{plugins:{legend:{position:'top',labels:{color:'#334155',font:{size:10}}},title:{display:true,text:'Follower growth',color:'#334155',font:{size:13}}},scales:{y:{ticks:{color:'#64748b'}},x:{ticks:{color:'#64748b',maxTicksLimit:8}}}}};
+}
+
+async function socialPage(doc,ig,li,tt){
+  header(doc,'Social Media','Reach, growth & engagement',PU);
+  var igA=(ig&&ig.account)||{},liA=(li&&li.account)||{},ttA=(tt&&tt.account)||{};
+  var igC=(ig&&ig.calculated_metrics)||{},liC=(li&&li.calculated_metrics)||{},ttC=(tt&&tt.calculated_metrics)||{};
+  var igF=igA.followers_count||0,liF=liA.followers_count||0,ttF=ttA.followers_count||0,total=igF+liF+ttF;
+  var igP=igA.media_count||0,liP=liC.posts_scraped||0,ttP=ttA.media_count||0;
+  var y=kpiBoxes(doc,40,[
+    {label:'Total Followers',value:fmt(total),sub:(igP+liP+ttP)+' posts tracked',accent:EM},
+    {label:'Instagram',value:fmt(igF),sub:igP+' posts · '+pct(igC.engagement_rate),accent:[225,48,108]},
+    {label:'LinkedIn',value:fmt(liF),sub:liP+' posts · '+pct(liC.engagement_rate),accent:[10,102,194]},
+    {label:'TikTok',value:fmt(ttF),sub:ttP+' posts · '+pct(ttC.engagement_rate),accent:[20,184,166]},
+  ]);
+  // followers-by-platform bar (left) + follower-growth line (right)
+  var bimg=await chartImage({type:'bar',data:{labels:['Instagram','LinkedIn','TikTok'],datasets:[{data:[igF,liF,ttF],backgroundColor:['#E1306C','#0a66c2','#14b8a6']}]},options:{plugins:{legend:{display:false},title:{display:true,text:'Followers by platform',color:'#334155',font:{size:13}}},scales:{y:{beginAtZero:true,ticks:{color:'#64748b'}},x:{ticks:{color:'#334155'}}}}},520,330);
+  if(bimg)doc.addImage(bimg,'JPEG',15,y,86,54);
+  var gcfg=followerGrowthConfig(ig,li,tt);
+  if(gcfg){var gimg=await chartImage(gcfg,560,330);if(gimg)doc.addImage(gimg,'JPEG',108,y,87,54);}
+  else{doc.setFontSize(8);doc.setTextColor.apply(doc,GR);doc.text('Follower-growth chart needs a few more days of history.',112,y+28,{maxWidth:84});}
+  // per-platform metrics table
+  var ty=sectionLabel(doc,y+62,'Platform metrics');
+  doc.autoTable({startY:ty+2,margin:{left:15,right:15},theme:'striped',styles:{fontSize:8.5,cellPadding:2.4},headStyles:{fillColor:PU,textColor:255,fontSize:8},
+    head:[['Platform','Followers','Posts','Engagement','Avg Likes/React','Avg Comments']],
+    body:[
+      ['Instagram',fmt(igF),String(igP),pct(igC.engagement_rate),fmt(igC.avg_likes),fmt(igC.avg_comments)],
+      ['LinkedIn',fmt(liF),String(liP),pct(liC.engagement_rate),fmt(liC.avg_reactions),fmt(liC.avg_comments)],
+      ['TikTok',fmt(ttF),String(ttP),pct(ttC.engagement_rate),fmt(ttC.avg_likes),fmt(ttC.avg_comments)],
+    ]});
+  // TikTok-specific extras when available
+  if(ttA.total_likes||ttC.avg_views){
+    var ny=doc.lastAutoTable.finalY+6;
+    doc.setFontSize(8.5);doc.setTextColor.apply(doc,GR);doc.setFont('helvetica','normal');
+    doc.text('TikTok: '+fmt(ttA.total_likes||0)+' total likes · '+fmt(ttC.avg_views||0)+' avg views/post.',15,ny);
+  }
+}
+
+// One platform's 3 most recent posts as a table.
+function recentPostsTable(doc,y,label,accent,d,type){
+  y=sectionLabel(doc,y,label);
+  var posts=((d&&d.posts)?d.posts.slice():[]).sort(function(a,b){return new Date(b.timestamp||0)-new Date(a.timestamp||0);}).slice(0,3);
+  function dt(p){return p.timestamp?new Date(p.timestamp).toLocaleDateString('de-DE'):'—';}
+  function cap(p){return cleanCap((type==='li')?p.text:p.caption,64);}
+  var head,body,capW;
+  if(type==='ig'){capW=92;head=[['Date','Caption','Likes','Comments','Eng.']];body=posts.map(function(p){var i=p.insights||{};return [dt(p),cap(p),fmt(i.likes),fmt(i.comments),fmt(i.engagement)];});}
+  else if(type==='li'){capW=74;head=[['Date','Caption','Reactions','Comments','Shares','Eng.']];body=posts.map(function(p){var i=p.insights||{};return [dt(p),cap(p),fmt(i.reactions),fmt(i.comments),fmt(i.shares),fmt(i.engagement)];});}
+  else{capW=74;head=[['Date','Caption','Views','Likes','Comments','Eng.']];body=posts.map(function(p){var i=p.insights||{};return [dt(p),cap(p),fmt(i.views),fmt(i.likes),fmt(i.comments),fmt(i.engagement)];});}
+  if(!body.length)body=[['—','No posts available'].concat(head[0].slice(2).map(function(){return '—';}))];
+  doc.autoTable({startY:y+2,margin:{left:15,right:15},theme:'striped',styles:{fontSize:8,cellPadding:2},headStyles:{fillColor:accent,textColor:255,fontSize:7.5},head:head,body:body,columnStyles:{1:{cellWidth:capW}}});
+  return doc.lastAutoTable.finalY+7;
+}
+
+function socialPostsPage(doc,ig,li,tt){
+  header(doc,'Social Media — Recent Posts','Latest 3 posts per platform',PU);
+  var y=40;
+  y=recentPostsTable(doc,y,'Instagram',[225,48,108],ig,'ig');
+  y=recentPostsTable(doc,y,'LinkedIn',[10,102,194],li,'li');
+  y=recentPostsTable(doc,y,'TikTok',[20,184,166],tt,'tt');
+}
+
+function membershipPage(doc,evk,fin){
+  header(doc,'Membership','Members, growth & retention',EM);
+  var m=evk&&evk.members?evk.members:{};
+  var yoy=fin&&fin.members_yoy?fin.members_yoy:{};
+  var dur=fin&&fin.avg_membership_duration?fin.avg_membership_duration:{};
+  var sign=(yoy.absolute_change||0)>=0?'+':'';
+  var y=kpiBoxes(doc,40,[
+    {label:'Current Members',value:fmt(yoy.current||m.total||0),sub:'active',accent:EM},
+    {label:'vs. Last Year',value:sign+(yoy.absolute_change||0),sub:sign+pct(yoy.percentage_change)+'',accent:BL},
+    {label:'New (30 days)',value:fmt(m.new_last_30_days||0),sub:'recent joiners',accent:AM},
+    {label:'Resigned',value:fmt(m.resigned||0),sub:'all-time',accent:RD},
+  ]);
+  y=kpiBoxes(doc,y,[
+    {label:'Avg Tenure (Overall)',value:(dur.overall_months||0)+' mo',small:true,accent:PU},
+    {label:'Avg Tenure (Active)',value:(dur.active_avg_months||0)+' mo',sub:'current tenure',small:true,accent:EM},
+    {label:'Avg Tenure (Resigned)',value:(dur.resigned_avg_months||0)+' mo',sub:'before leaving',small:true,accent:RD},
+    {label:'Applications',value:fmt(m.applications||0),sub:'pending',small:true,accent:BL},
+  ]);
+  doc.setFont('helvetica','normal');doc.setFontSize(9);doc.setTextColor.apply(doc,GR);
+  doc.text('Member fee: €3 / month · 100% non-profit.',15,y+2,{maxWidth:180});
+}
+
+async function sponsorsPage(doc,spon){
+  header(doc,'Sponsors','Partner contributions & outlook',AM);
+  spon=spon||{};var fc=spon.forecast||{};
+  var y=kpiBoxes(doc,40,[
+    {label:'Paid in '+(spon.current_year||''),value:eur(spon.current_year_total),sub:(spon.sponsors_paid_this_year||0)+' sponsors',accent:EM},
+    {label:'Expected Remaining',value:eur(fc.expected_remaining),sub:'history estimate',accent:AM},
+    {label:'Projected Year-End',value:eur(fc.projected_year_end),sub:'paid + expected',accent:PU},
+    {label:'All-Time Total',value:eur(spon.total_sponsoring),sub:(spon.sponsor_count||0)+' partners',accent:BL},
+  ]);
+  // payments this year
+  y=sectionLabel(doc,y,'Payments in '+(spon.current_year||''));
+  var pays=(spon.payments_this_year||[]).map(function(p){return [new Date(p.date).toLocaleDateString('de-DE'),p.sponsor,eur(p.amount)];});
+  doc.autoTable({startY:y+2,margin:{left:15,right:108},theme:'striped',styles:{fontSize:8,cellPadding:1.8},headStyles:{fillColor:EM,textColor:255},head:[['Date','Sponsor','Amount']],body:pays.length?pays:[['—','No payments yet','—']]});
+  var leftY=doc.lastAutoTable.finalY;
+  // expected further payments (right column)
+  doc.autoTable({startY:y+2,margin:{left:108,right:15},theme:'striped',styles:{fontSize:8,cellPadding:1.8},headStyles:{fillColor:AM,textColor:255},head:[['Expected next','€','~When']],body:(fc.items&&fc.items.length?fc.items.map(function(f){return [f.sponsor,eur(f.expected_remaining),f.typical_month||'—'];}):[['None forecast','—','—']])});
+  // top sponsors chart
+  var chartY=Math.max(leftY,doc.lastAutoTable.finalY)+8;
+  var top=(spon.sponsors||[]).slice(0,8);
+  if(top.length){
+    var img=await chartImage({type:'bar',data:{labels:top.map(function(s){return s.name;}),datasets:[{data:top.map(function(s){return s.total;}),backgroundColor:'#f59e0b'}]},options:{indexAxis:'y',plugins:{legend:{display:false},title:{display:true,text:'Top sponsors (all-time €)',color:'#334155',font:{size:14}}},scales:{x:{beginAtZero:true,ticks:{color:'#64748b'}},y:{ticks:{color:'#334155',font:{size:11}}}}}},800,360);
+    if(img&&chartY<250)doc.addImage(img,'JPEG',15,chartY,180,80);
+  }
+}
+
+async function financialsPage(doc,fin){
+  header(doc,'Financials','Income, expenses & diversification',AM);
+  fin=fin||{};var cur=fin.current||{};
+  var rev=cur.revenue_split||{},exp=cur.expense_split||{};
+  var net=(cur.total_income||0)-(cur.total_expenses||0);
+  var y=kpiBoxes(doc,40,[
+    {label:'Income '+(fin.current_year||''),value:eur(cur.total_income),accent:EM},
+    {label:'Expenses '+(fin.current_year||''),value:eur(cur.total_expenses),accent:RD},
+    {label:'Net '+(fin.current_year||''),value:eur(net),accent:net>=0?EM:RD},
+  ]);
+  // revenue donut + expense bar side by side
+  var revLabels=['Member Fees','Sponsoring','Travel Dep.','Merch','Other'];
+  var revData=[rev.member_fees,rev.sponsoring,rev.travel_deposits,rev.merch,rev.other].map(function(x){return x?x.total:0;});
+  var dimg=await chartImage({type:'doughnut',data:{labels:revLabels,datasets:[{data:revData,backgroundColor:['#10b981','#3b82f6','#a855f7','#f59e0b','#94a3b8']}]},options:{plugins:{legend:{position:'right',labels:{color:'#334155',font:{size:10}}},title:{display:true,text:'Revenue split',color:'#334155',font:{size:13}}}}},520,360);
+  if(dimg)doc.addImage(dimg,'JPEG',15,y,90,62);
+  var expLabels=['Stammtisch','Travel','Events','Subs','Merch','Supplies','Other'];
+  var expData=[exp.stammtisch,exp.travel,exp.events,exp.subscriptions,exp.merch,exp.supplies,exp.other].map(function(x){return x?x.total:0;});
+  var eimg=await chartImage({type:'bar',data:{labels:expLabels,datasets:[{data:expData,backgroundColor:'#ef4444'}]},options:{indexAxis:'y',plugins:{legend:{display:false},title:{display:true,text:'Expense breakdown',color:'#334155',font:{size:13}}},scales:{x:{beginAtZero:true,ticks:{color:'#64748b'}},y:{ticks:{color:'#334155',font:{size:9}}}}}},560,360);
+  if(eimg)doc.addImage(eimg,'JPEG',108,y,87,62);
+  // monthly income vs expenses
+  var my=y+70;
+  var mi=cur.monthly_income||[],me=cur.monthly_expenses||[];
+  if(mi.length){
+    var mimg=await chartImage({type:'bar',data:{labels:mi.map(function(m){return m.label;}),datasets:[{label:'Income',data:mi.map(function(m){return m.value;}),backgroundColor:'#10b981'},{label:'Expenses',data:me.map(function(m){return m.value;}),backgroundColor:'#ef4444'}]},options:{plugins:{legend:{position:'top',labels:{color:'#334155'}},title:{display:true,text:'Monthly income vs expenses',color:'#334155',font:{size:13}}},scales:{y:{beginAtZero:true,ticks:{color:'#64748b'}},x:{ticks:{color:'#334155'}}}}},900,300);
+    if(mimg)doc.addImage(mimg,'JPEG',15,my,180,55);
+  }
+}
+
+function footers(doc){
+  var n=doc.getNumberOfPages();
+  var date=new Date().toLocaleDateString('de-DE');
+  for(var i=2;i<=n;i++){
+    doc.setPage(i);
+    doc.setFontSize(7.5);doc.setTextColor.apply(doc,GR);doc.setFont('helvetica','normal');
+    doc.text('FCL Board Report · '+date,15,290);
+    doc.text('Confidential',105,290,{align:'center'});
+    doc.text(i+' / '+n,195,290,{align:'right'});
+  }
+}
+
+async function generate(){
+  var btn=document.getElementById('genBtn');btn.disabled=true;
+  try{
+    setStatus('Fetching data…','wait');
+    var res=await Promise.all([
+      getJSON('/api/kpis'),getJSON('/api/linkedin/kpis'),getJSON('/api/tiktok/kpis'),
+      getJSON('/api/easyverein/kpis'),getJSON('/api/easyverein/finance-kpis'),getJSON('/api/easyverein/sponsors'),
+    ]);
+    var ig=res[0],li=res[1],tt=res[2],evk=res[3],fin=res[4],spon=res[5];
+    setStatus('Building report…','wait');
+    var doc=new jspdf.jsPDF({unit:'mm',format:'a4'});
+    coverPage(doc,fin);
+    doc.addPage();await socialPage(doc,ig,li,tt);
+    doc.addPage();socialPostsPage(doc,ig,li,tt);
+    doc.addPage();membershipPage(doc,evk,fin);
+    doc.addPage();await sponsorsPage(doc,spon);
+    doc.addPage();await financialsPage(doc,fin);   // financials = final, separate page
+    footers(doc);
+    doc.save('FCL-Board-Report-'+ymd()+'.pdf');
+    setStatus('Done — PDF downloaded.','ok');
+  }catch(e){
+    setStatus('Error: '+(e&&e.message?e.message:e),'err');
+  }finally{ btn.disabled=false; }
+}
+</script>
+</body>
+</html>

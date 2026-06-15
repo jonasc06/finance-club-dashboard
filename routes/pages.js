@@ -32,4 +32,8 @@ router.get('/sponsors', requireRole('admin'), (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'sponsors.html'));
 });
 
+router.get('/report', requireRole('admin'), (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'report.html'));
+});
+
 module.exports = router;
