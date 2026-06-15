@@ -2,6 +2,7 @@ const express = require('express');
 const { verifyCron } = require('../middleware/auth');
 const ig = require('../services/instagram');
 const li = require('../services/linkedin');
+const tt = require('../services/tiktok');
 const ev = require('../services/easyverein');
 
 const router = express.Router();
@@ -40,6 +41,14 @@ router.post('/api/cron/refresh-all', verifyCron, async (req, res) => {
     results.linkedin = { ok: true, skipped: true, reason: 'last fetch too recent' };
   }
 
+  // TikTok
+  const ttCache = tt.getCache();
+  if (shouldRunBiDaily(ttCache.lastFetch)) {
+    results.tiktok = await tt.refreshCache({ fullImageRescrape: false });
+  } else {
+    results.tiktok = { ok: true, skipped: true, reason: 'last fetch too recent' };
+  }
+
   // EasyVerein
   const evCache = ev.getCache();
   if (shouldRunBiDaily(evCache.lastFetch)) {
@@ -63,6 +72,7 @@ router.post('/api/cron/refresh-full', verifyCron, async (req, res) => {
 
   results.instagram  = await ig.refreshCache({ fullImageRescrape: true });
   results.linkedin   = await li.refreshCache({ fullImageRescrape: true });
+  results.tiktok     = await tt.refreshCache({ fullImageRescrape: true });
   results.easyverein = await ev.refreshCache();
 
   console.log('[Cron] Monthly full refresh complete:', JSON.stringify(results));

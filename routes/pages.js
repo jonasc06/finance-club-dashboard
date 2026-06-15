@@ -16,6 +16,10 @@ router.get('/linkedin', requireAuth, (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'linkedin.html'));
 });
 
+router.get('/tiktok', requireAuth, (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'tiktok.html'));
+});
+
 router.get('/easyverein', requireRole('admin'), (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'easyverein.html'));
 });

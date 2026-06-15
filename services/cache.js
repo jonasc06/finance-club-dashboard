@@ -7,7 +7,7 @@ const IS_PRODUCTION = process.env.NODE_ENV === 'production';
 
 function ensureDataDir() {
   if (!IS_PRODUCTION) {
-    [config.DATA_DIR, config.IG_IMAGES, config.LI_IMAGES].forEach(d => {
+    [config.DATA_DIR, config.IG_IMAGES, config.LI_IMAGES, config.TT_IMAGES].forEach(d => {
       if (!fs.existsSync(d)) fs.mkdirSync(d, { recursive: true });
     });
   }

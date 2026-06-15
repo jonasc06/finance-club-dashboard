@@ -16,7 +16,7 @@ I built this dashboard to support the board of my nonprofit organization (I'm He
 | Layer | Technology |
 |-------|-----------|
 | Backend | Node.js, Express |
-| Scraping | Apify (Instagram & LinkedIn actors) |
+| Scraping | Apify (Instagram, LinkedIn & TikTok actors) |
 | Membership Data | EasyVerein API |
 | Auth | bcrypt + cookie-session (role-based) |
 | Secrets | Google Cloud Secret Manager |
@@ -83,6 +83,7 @@ gcloud scheduler jobs create http refresh-full \
 Required environment variables (see `.env.example`):
 - `APIFY_TOKEN` — Apify API key for scraping
 - `INSTAGRAM_USERNAME` — Target Instagram profile
+- `TIKTOK_USERNAME` — Target TikTok profile (handle without `@`)
 - `LINKEDIN_COMPANY_URL` — Target LinkedIn company page
 - `EASYVEREIN_SECRET` — EasyVerein API token
 - `DASHBOARD_PASSWORD` — Admin login password (full access)
@@ -119,7 +120,7 @@ Required environment variables (see `.env.example`):
 
 **Data flow:**
 1. Cloud Scheduler triggers `/api/cron/refresh-all` every 2 days
-2. Server calls Apify actors to scrape Instagram/LinkedIn data
+2. Server calls Apify actors to scrape Instagram/LinkedIn/TikTok data
 3. EasyVerein API provides membership stats
 4. Results are cached locally (dev) or in Cloud Storage (prod)
 5. Frontend fetches cached data and renders charts

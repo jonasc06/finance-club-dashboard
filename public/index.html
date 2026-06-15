@@ -31,6 +31,7 @@
     .card-1{animation:fadeUp .5s ease .3s both}
     .card-2{animation:fadeUp .5s ease .4s both}
     .card-3{animation:fadeUp .5s ease .5s both}
+    .card-4{animation:fadeUp .5s ease .6s both}
     .platform-header{display:flex;align-items:center;gap:14px}
     .platform-icon{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
     .platform-name{font-family:'Syne',sans-serif;font-size:1.15rem;font-weight:700}
@@ -95,7 +96,19 @@
       <div class="view-link">View Dashboard <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></div>
     </a>
 
-    <a href="/easyverein" id="evCard" class="platform-card card-2" style="--card-accent:var(--emerald)">
+    <a href="/tiktok" class="platform-card card-2" style="--card-accent:linear-gradient(90deg,#25F4EE,#FE2C55)">
+      <div class="platform-header">
+        <div class="platform-icon" style="background:rgba(254,44,85,.1);color:#FE2C55">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M16.6 5.82s.51.5 0 0A4.28 4.28 0 0 1 15.54 3h-3.09v12.4a2.59 2.59 0 0 1-2.59 2.5c-1.42 0-2.6-1.16-2.6-2.6 0-1.72 1.66-3.01 3.37-2.48V9.66c-3.45-.46-6.47 2.22-6.47 5.64 0 3.33 2.76 5.7 5.69 5.7 3.14 0 5.69-2.55 5.69-5.7V9.01a7.35 7.35 0 0 0 4.3 1.38V7.3s-1.88.09-3.34-1.48z"/></svg>
+        </div>
+        <span class="platform-name">TikTok</span>
+        <span class="platform-tag" style="background:rgba(254,44,85,.1);color:#FE2C55">Social</span>
+      </div>
+      <div id="ttKpis" class="loading-mini">Loading...</div>
+      <div class="view-link">View Dashboard <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></div>
+    </a>
+
+    <a href="/easyverein" id="evCard" class="platform-card card-3" style="--card-accent:var(--emerald)">
       <div class="platform-header">
         <div class="platform-icon" style="background:var(--emerald-dim);color:var(--emerald)">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
@@ -107,7 +120,7 @@
       <div class="view-link">View Dashboard <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></div>
     </a>
 
-    <a href="/finance" id="finCard" class="platform-card card-3" style="--card-accent:#38bdf8">
+    <a href="/finance" id="finCard" class="platform-card card-4" style="--card-accent:#38bdf8">
       <div class="platform-header">
         <div class="platform-icon" style="background:rgba(56,189,248,.1);color:#38bdf8">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
@@ -141,7 +154,7 @@ function renderCard(el,data,type){
       '</div>';
   } else {
     var followers,engRate,posts;
-    if(type==='ig'){
+    if(type==='ig'||type==='tt'){
       followers=a.followers_count||0;
       engRate=cm.engagement_rate||0;
       posts=a.media_count||0;
@@ -212,6 +225,7 @@ async function init() {
 
   loadCard('/api/kpis', 'igKpis', 'ig');
   loadCard('/api/linkedin/kpis', 'liKpis', 'li');
+  loadCard('/api/tiktok/kpis', 'ttKpis', 'tt');
   if (role === 'admin') {
     loadCard('/api/easyverein/kpis', 'evKpis', 'ev');
     loadFinanceCard();

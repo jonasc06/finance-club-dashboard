@@ -40,6 +40,7 @@ async function loadAllSecrets() {
     'MARKETING_PASSWORD',
     'LINKEDIN_COMPANY_URL',
     'INSTAGRAM_USERNAME',
+    'TIKTOK_USERNAME',
     'CRON_SECRET',
     'EASYVEREIN_SECRET',
   ];

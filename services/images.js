@@ -28,7 +28,7 @@ async function downloadImage(url, filename, subdir) {
       try { fs.unlinkSync(tmpPath); } catch {}
       return gcsUrl;
     } else {
-      const targetDir = subdir === 'li' ? config.LI_IMAGES : config.IG_IMAGES;
+      const targetDir = { li: config.LI_IMAGES, tt: config.TT_IMAGES, ig: config.IG_IMAGES }[subdir] || config.IG_IMAGES;
       if (!fs.existsSync(targetDir)) fs.mkdirSync(targetDir, { recursive: true });
       const filepath = path.join(targetDir, filename + ext);
       fs.writeFileSync(filepath, resp.data);

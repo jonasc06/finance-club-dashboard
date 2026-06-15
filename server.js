@@ -14,6 +14,7 @@ async function start() {
   const { streamImage } = require('./services/storage');
   const ig = require('./services/instagram');
   const li = require('./services/linkedin');
+  const tt = require('./services/tiktok');
   const ev = require('./services/easyverein');
 
   const app = express();
@@ -34,6 +35,7 @@ async function start() {
   app.use(require('./routes/cron'));
   app.use(require('./routes/instagram'));
   app.use(require('./routes/linkedin'));
+  app.use(require('./routes/tiktok'));
   app.use(require('./routes/easyverein'));
   app.use(require('./routes/pages'));
 
@@ -42,7 +44,7 @@ async function start() {
     const { subdir, filename } = req.params;
 
     // Sanitize to prevent path traversal
-    if (!/^(ig|li)$/.test(subdir) || /[\/\\]/.test(filename)) {
+    if (!/^(ig|li|tt)$/.test(subdir) || /[\/\\]/.test(filename)) {
       return res.status(400).send('Invalid path');
     }
 
@@ -86,6 +88,7 @@ async function start() {
     // Load cached data from GCS — no scraping on startup
     await ig.loadCacheFromDisk();
     await li.loadCacheFromDisk();
+    await tt.loadCacheFromDisk();
     await ev.loadCacheFromDisk();
 
     if (!ig.getCache().lastFetch) {
@@ -93,6 +96,9 @@ async function start() {
     }
     if (!li.getCache().lastFetch) {
       console.log('[Startup] No LI cache yet — will be populated on next cron run');
+    }
+    if (!tt.getCache().lastFetch) {
+      console.log('[Startup] No TT cache yet — will be populated on next cron run');
     }
     if (!ev.getCache().lastFetch) {
       console.log('[Startup] No EV cache yet — will be populated on next cron run');

@@ -1,0 +1,779 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>Finance Club Leipzig – TikTok Analytics</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=JetBrains+Mono:wght@400;500&family=Nunito+Sans:opsz,wght@6..12,400;6..12,500;6..12,600&display=swap" rel="stylesheet"/>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+  <style>
+    :root{--bg:#080b12;--surface:#111827;--surface-2:#1e293b;--border:rgba(148,163,184,.08);--border-2:rgba(148,163,184,.12);--text:#f1f5f9;--text-2:#94a3b8;--text-3:#64748b;--emerald:#10b981;--tt1:#25F4EE;--tt2:#FE2C55}
+
+    *{box-sizing:border-box;margin:0;padding:0}
+
+    body{
+      font-family:'Nunito Sans',system-ui,sans-serif;
+      background:var(--bg);
+      color:var(--text);
+      background-image:
+        linear-gradient(var(--border) 1px,transparent 1px),
+        linear-gradient(90deg,var(--border) 1px,transparent 1px),
+        radial-gradient(ellipse 60% 40% at 50% 0%,rgba(254,44,85,.07),transparent);
+      background-size:64px 64px,64px 64px,100% 100%;
+      min-height:100vh;
+    }
+
+    header{
+      background:var(--surface);
+      border-bottom:1px solid var(--border-2);
+      color:var(--text);
+      padding:16px 32px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      flex-wrap:wrap;
+      gap:12px;
+      position:sticky;
+      top:0;
+      z-index:100;
+      backdrop-filter:blur(12px);
+    }
+    header h1{
+      font-family:'Syne',sans-serif;
+      font-weight:700;
+      font-size:1.2rem;
+      display:flex;
+      align-items:center;
+      gap:10px;
+    }
+    header h1 .tt-icon{color:var(--tt2)}
+    .back-link{
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      padding:7px 14px;
+      background:transparent;
+      color:var(--text-2);
+      border:1px solid var(--border-2);
+      border-radius:8px;
+      font-size:.8rem;
+      font-family:'Nunito Sans',sans-serif;
+      text-decoration:none;
+      transition:all .2s;
+    }
+    .back-link:hover{background:var(--surface-2);color:var(--text)}
+
+    .right{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+    #lastFetch{font-size:.75rem;color:var(--text-3);font-family:'JetBrains Mono',monospace;font-weight:400}
+    .btn-logout{
+      padding:7px 14px;
+      background:transparent;
+      color:var(--text-3);
+      border:1px solid var(--border-2);
+      border-radius:8px;
+      cursor:pointer;
+      font-size:.78rem;
+      font-family:'Nunito Sans',sans-serif;
+      transition:all .2s;
+    }
+    .btn-logout:hover{background:var(--surface-2);color:var(--text)}
+    .source-badge{
+      font-size:.7rem;
+      font-family:'JetBrains Mono',monospace;
+      background:var(--surface-2);
+      border:1px solid var(--border-2);
+      padding:4px 12px;
+      border-radius:20px;
+      color:var(--text-2);
+    }
+
+    main{padding:32px;max-width:1320px;margin:0 auto}
+
+    /* Profile card */
+    .profile-card{
+      background:var(--surface);
+      border:1px solid var(--border-2);
+      border-radius:16px;
+      padding:28px 32px;
+      display:flex;
+      align-items:center;
+      gap:24px;
+      margin-bottom:28px;
+      box-shadow:0 2px 12px rgba(0,0,0,.2);
+      animation:fadeUp .5s ease both;
+    }
+    .profile-card img{
+      width:76px;height:76px;border-radius:50%;object-fit:cover;
+      border:3px solid var(--tt2);
+      flex-shrink:0;
+    }
+    .profile-card .avatar-placeholder{
+      width:76px;height:76px;border-radius:50%;
+      background:var(--surface-2);
+      border:3px solid var(--tt2);
+      display:flex;align-items:center;justify-content:center;
+      color:var(--text-3);
+      flex-shrink:0;
+    }
+    .profile-card .info h2{font-family:'Syne',sans-serif;font-weight:700;font-size:1.2rem;color:var(--text)}
+    .profile-card .info p{color:var(--text-2);font-size:.88rem;margin-top:4px;white-space:pre-line;line-height:1.5}
+    .profile-card .info a{color:var(--tt2);text-decoration:none}
+    .profile-card .info a:hover{text-decoration:underline}
+
+    /* KPI Grid */
+    .kpi-grid{
+      display:grid;
+      grid-template-columns:repeat(auto-fit,minmax(185px,1fr));
+      gap:16px;
+      margin-bottom:28px;
+    }
+    .kpi-card{
+      background:var(--surface);
+      border:1px solid var(--border-2);
+      border-radius:16px;
+      padding:22px 18px;
+      box-shadow:0 2px 12px rgba(0,0,0,.2);
+      text-align:center;
+      position:relative;
+      overflow:hidden;
+      animation:fadeUp .5s ease both;
+    }
+    .kpi-card::before{
+      content:'';
+      position:absolute;
+      top:0;left:0;right:0;
+      height:3px;
+      background:linear-gradient(90deg,var(--accent,#FE2C55),var(--accent-end,#25F4EE));
+    }
+    .kpi-card .icon{margin-bottom:8px;color:var(--accent,#FE2C55);opacity:.7}
+    .kpi-card .label{
+      font-size:.65rem;
+      text-transform:uppercase;
+      letter-spacing:.08em;
+      color:var(--text-3);
+      margin-bottom:8px;
+      font-weight:600;
+    }
+    .kpi-card .value{
+      font-size:1.9rem;
+      font-weight:500;
+      font-family:'JetBrains Mono',monospace;
+      color:var(--accent,#FE2C55);
+    }
+    .kpi-card .sub{font-size:.7rem;color:var(--text-3);margin-top:6px}
+    .kpi-card .change{font-size:.72rem;margin-top:8px;font-weight:600;font-family:'JetBrains Mono',monospace}
+    .change.up{color:#10b981}
+    .change.down{color:#ef4444}
+    .change.flat{color:var(--text-3)}
+
+    /* Charts */
+    .charts-grid{
+      display:grid;
+      grid-template-columns:repeat(auto-fit,minmax(420px,1fr));
+      gap:20px;
+      margin-bottom:32px;
+    }
+    .chart-card{
+      background:var(--surface);
+      border:1px solid var(--border-2);
+      border-radius:16px;
+      padding:24px;
+      box-shadow:0 2px 12px rgba(0,0,0,.2);
+      animation:fadeUp .5s ease both;
+    }
+    .chart-card h3{
+      font-family:'Syne',sans-serif;
+      font-weight:700;
+      font-size:.95rem;
+      margin-bottom:16px;
+      color:var(--text);
+      display:flex;
+      align-items:center;
+      gap:8px;
+    }
+    .chart-card h3 .chart-icon{color:var(--text-3)}
+    .chart-card .na-msg{
+      color:var(--text-3);
+      font-size:.85rem;
+      text-align:center;
+      padding:40px 0;
+    }
+
+    /* Best Post */
+    .top-post-section{margin-bottom:32px;animation:fadeUp .5s ease both}
+    .top-post-section h3{
+      font-family:'Syne',sans-serif;
+      font-weight:700;
+      font-size:1.05rem;
+      margin-bottom:16px;
+      color:var(--text);
+      display:flex;
+      align-items:center;
+      gap:10px;
+    }
+    .top-post-card{
+      background:linear-gradient(135deg,#FE2C55,#25F4EE);
+      border-radius:16px;
+      padding:28px;
+      color:#fff;
+      display:flex;
+      gap:24px;
+      align-items:center;
+      flex-wrap:wrap;
+      text-decoration:none;
+      box-shadow:0 4px 24px rgba(254,44,85,.25);
+      transition:transform .2s,box-shadow .2s;
+    }
+    .top-post-card:hover{transform:translateY(-2px);box-shadow:0 8px 32px rgba(254,44,85,.35)}
+    .top-post-card .top-img{
+      width:160px;height:160px;border-radius:12px;
+      object-fit:cover;flex-shrink:0;display:block;
+      box-shadow:0 4px 16px rgba(0,0,0,.3);
+    }
+    .top-post-card .top-img-placeholder{
+      width:160px;height:160px;border-radius:12px;
+      background:rgba(255,255,255,.12);
+      display:flex;align-items:center;justify-content:center;
+      flex-shrink:0;
+      color:rgba(255,255,255,.5);
+    }
+    .top-post-card .top-info{flex:1;min-width:200px}
+    .top-post-card .top-info h4{
+      font-family:'Syne',sans-serif;
+      font-weight:600;
+      font-size:.9rem;
+      margin-bottom:8px;
+      opacity:.85;
+    }
+    .top-post-card .top-info .top-caption{
+      font-size:.88rem;
+      opacity:.9;
+      margin-bottom:14px;
+      display:-webkit-box;
+      -webkit-line-clamp:3;
+      -webkit-box-orient:vertical;
+      overflow:hidden;
+      line-height:1.5;
+    }
+    .top-post-card .top-stats{display:flex;gap:10px;flex-wrap:wrap}
+    .top-post-card .top-stats span{
+      font-size:.8rem;
+      background:rgba(255,255,255,.18);
+      padding:5px 14px;
+      border-radius:20px;
+      display:inline-flex;
+      align-items:center;
+      gap:5px;
+      font-family:'JetBrains Mono',monospace;
+      font-weight:400;
+      backdrop-filter:blur(4px);
+    }
+
+    /* Performance table */
+    .table-section{margin-bottom:32px;animation:fadeUp .5s ease both}
+    .table-section h3{
+      font-family:'Syne',sans-serif;
+      font-weight:700;
+      font-size:1.05rem;
+      margin-bottom:16px;
+      color:var(--text);
+      display:flex;
+      align-items:center;
+      gap:10px;
+    }
+    .table-wrap{
+      background:var(--surface);
+      border:1px solid var(--border-2);
+      border-radius:16px;
+      overflow-x:auto;
+      box-shadow:0 2px 12px rgba(0,0,0,.2);
+    }
+    table.perf{
+      width:100%;
+      border-collapse:collapse;
+      font-size:.82rem;
+      min-width:720px;
+    }
+    table.perf th,table.perf td{
+      padding:12px 14px;
+      text-align:right;
+      white-space:nowrap;
+      border-bottom:1px solid var(--border);
+    }
+    table.perf th:first-child,table.perf td:first-child{
+      text-align:left;
+      white-space:normal;
+      min-width:220px;
+      max-width:340px;
+    }
+    table.perf thead th{
+      font-family:'Nunito Sans',sans-serif;
+      font-size:.68rem;
+      text-transform:uppercase;
+      letter-spacing:.05em;
+      color:var(--text-3);
+      font-weight:700;
+      cursor:pointer;
+      user-select:none;
+      position:sticky;
+      top:0;
+      background:var(--surface);
+    }
+    table.perf thead th:hover{color:var(--text)}
+    table.perf thead th .arrow{color:var(--tt2);font-size:.7rem;margin-left:3px}
+    table.perf tbody tr{transition:background .15s}
+    table.perf tbody tr:hover{background:rgba(254,44,85,.05)}
+    table.perf tbody tr:last-child td{border-bottom:none}
+    table.perf td{font-family:'JetBrains Mono',monospace;color:var(--text-2)}
+    table.perf td.num{color:var(--text)}
+    table.perf .post-cell{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--text)}
+    table.perf .post-cell:hover .post-cap{color:var(--tt2)}
+    table.perf .post-cell img{width:38px;height:38px;border-radius:8px;object-fit:cover;flex-shrink:0;background:var(--surface-2)}
+    table.perf .post-cell .ph{width:38px;height:38px;border-radius:8px;background:var(--surface-2);display:flex;align-items:center;justify-content:center;color:var(--text-3);flex-shrink:0}
+    table.perf .post-cap{
+      font-family:'Nunito Sans',sans-serif;
+      display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;line-height:1.35;
+    }
+    table.perf .pin{color:var(--tt2);font-size:.65rem;margin-left:4px}
+    table.perf .er{color:var(--tt1)}
+
+    /* Posts Grid */
+    .posts-section{animation:fadeUp .5s ease both}
+    .posts-section h3{
+      font-family:'Syne',sans-serif;
+      font-weight:700;
+      font-size:1.05rem;
+      margin-bottom:16px;
+      color:var(--text);
+      display:flex;
+      align-items:center;
+      gap:10px;
+    }
+    .posts-grid{
+      display:grid;
+      grid-template-columns:repeat(auto-fill,minmax(280px,1fr));
+      gap:16px;
+    }
+    .post-card{
+      background:var(--surface);
+      border:1px solid var(--border-2);
+      border-radius:14px;
+      overflow:hidden;
+      box-shadow:0 2px 12px rgba(0,0,0,.2);
+      transition:transform .25s,box-shadow .25s;
+      text-decoration:none;
+      color:inherit;
+      display:flex;
+      flex-direction:column;
+    }
+    .post-card:hover{transform:translateY(-4px);box-shadow:0 8px 28px rgba(0,0,0,.35)}
+    .post-card .post-img-wrap{
+      width:100%;height:0;padding-bottom:125%;
+      position:relative;overflow:hidden;
+      background:var(--surface-2);
+      flex-shrink:0;
+    }
+    .post-card .post-img-wrap img{
+      position:absolute;top:0;left:0;
+      width:100%;height:100%;
+      object-fit:cover;display:block;
+    }
+    .post-card .post-img-wrap .no-img{
+      position:absolute;top:0;left:0;
+      width:100%;height:100%;
+      display:flex;align-items:center;justify-content:center;
+      color:var(--text-3);
+      background:linear-gradient(135deg,var(--surface-2),var(--surface));
+    }
+    .post-card .post-img-wrap .views-overlay{
+      position:absolute;bottom:8px;left:8px;
+      background:rgba(0,0,0,.6);
+      backdrop-filter:blur(4px);
+      color:#fff;
+      font-size:.72rem;
+      font-family:'JetBrains Mono',monospace;
+      padding:3px 9px;
+      border-radius:20px;
+      display:inline-flex;align-items:center;gap:4px;
+    }
+    .post-body{padding:16px;flex:1;display:flex;flex-direction:column}
+    .caption{
+      font-size:.82rem;
+      color:var(--text-2);
+      display:-webkit-box;
+      -webkit-line-clamp:2;
+      -webkit-box-orient:vertical;
+      overflow:hidden;
+      margin-bottom:12px;
+      min-height:2.4em;
+      line-height:1.5;
+    }
+    .post-meta{display:flex;gap:6px;flex-wrap:wrap}
+    .post-meta span{
+      font-size:.72rem;
+      background:var(--surface-2);
+      border:1px solid var(--border-2);
+      padding:4px 10px;
+      border-radius:20px;
+      color:var(--text-2);
+      display:inline-flex;
+      align-items:center;
+      gap:4px;
+      font-family:'JetBrains Mono',monospace;
+    }
+    .post-meta span.highlight{
+      background:linear-gradient(135deg,rgba(254,44,85,.2),rgba(37,244,238,.2));
+      border-color:rgba(254,44,85,.3);
+      color:var(--tt2);
+    }
+    .post-date{
+      font-size:.68rem;
+      color:var(--text-3);
+      margin-top:auto;
+      padding-top:10px;
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+    }
+    .post-date .date-text{display:inline-flex;align-items:center;gap:4px}
+    .media-badge{
+      font-size:.62rem;
+      background:var(--surface-2);
+      border:1px solid var(--border-2);
+      padding:2px 8px;
+      border-radius:4px;
+      color:var(--text-3);
+      font-family:'JetBrains Mono',monospace;
+    }
+
+    /* Loading, error, toast */
+    .loading{
+      text-align:center;
+      padding:80px;
+      color:var(--text-3);
+      font-size:1rem;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      gap:16px;
+    }
+    .loading .spinner{
+      width:32px;height:32px;
+      border:3px solid var(--surface-2);
+      border-top-color:var(--tt2);
+      border-radius:50%;
+      animation:spin .8s linear infinite;
+    }
+    .err{
+      background:rgba(239,68,68,.1);
+      border:1px solid rgba(239,68,68,.2);
+      color:#ef4444;
+      border-radius:12px;
+      padding:20px;
+      margin:20px 0;
+      font-size:.9rem;
+    }
+
+    /* Animations */
+    @keyframes fadeUp{
+      from{opacity:0;transform:translateY(16px)}
+      to{opacity:1;transform:translateY(0)}
+    }
+    @keyframes spin{to{transform:rotate(360deg)}}
+
+    .kpi-card:nth-child(1){animation-delay:.05s}
+    .kpi-card:nth-child(2){animation-delay:.1s}
+    .kpi-card:nth-child(3){animation-delay:.15s}
+    .kpi-card:nth-child(4){animation-delay:.2s}
+    .kpi-card:nth-child(5){animation-delay:.25s}
+    .kpi-card:nth-child(6){animation-delay:.3s}
+    .kpi-card:nth-child(7){animation-delay:.35s}
+    .kpi-card:nth-child(8){animation-delay:.4s}
+    .kpi-card:nth-child(9){animation-delay:.45s}
+    .chart-card:nth-child(1){animation-delay:.15s}
+    .chart-card:nth-child(2){animation-delay:.25s}
+    .chart-card:nth-child(3){animation-delay:.35s}
+    .chart-card:nth-child(4){animation-delay:.45s}
+
+    @media(max-width:600px){
+      header{padding:14px 16px}
+      main{padding:16px}
+      .charts-grid{grid-template-columns:1fr}
+      .profile-card{flex-direction:column;text-align:center}
+      .top-post-card{flex-direction:column}
+      .top-post-card .top-img,.top-post-card .top-img-placeholder{width:100%;height:200px}
+    }
+  </style>
+</head>
+<body>
+<header>
+  <a href="/" class="back-link"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg> Menu</a>
+  <h1><span class="tt-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M16.6 5.82s.51.5 0 0A4.28 4.28 0 0 1 15.54 3h-3.09v12.4a2.59 2.59 0 0 1-2.59 2.5c-1.42 0-2.6-1.16-2.6-2.6 0-1.72 1.66-3.01 3.37-2.48V9.66c-3.45-.46-6.47 2.22-6.47 5.64 0 3.33 2.76 5.7 5.69 5.7 3.14 0 5.69-2.55 5.69-5.7V9.01a7.35 7.35 0 0 0 4.3 1.38V7.3s-1.88.09-3.34-1.48z"/></svg></span> TikTok Analytics</h1>
+  <div class="right">
+    <span id="lastFetch">Loading...</span>
+    <span id="sourceBadge" class="source-badge"></span>
+    <form method="POST" action="/logout" style="margin:0">
+      <button class="btn-logout" type="submit">Logout</button>
+    </form>
+  </div>
+</header>
+<main id="app"><div class="loading"><div class="spinner"></div>Loading TikTok data...</div></main>
+<script>
+function fmt(n){if(n==null||n===0)return'—';if(n>=1e6)return(n/1e6).toFixed(1)+'M';if(n>=1e3)return(n/1e3).toFixed(1)+'K';return String(n)}
+function pct(n){return n!=null?n.toFixed(2)+'%':'—'}
+function relDate(ts){if(!ts)return'';var d=Math.floor((Date.now()-new Date(ts).getTime())/86400000);if(d===0)return'Today';if(d===1)return'Yesterday';return d+' days ago'}
+function esc(s){var d=document.createElement('div');d.textContent=s;return d.innerHTML}
+
+function postImg(p){return p.local_image||p.thumbnail_url||p.media_url||''}
+
+function timeData(ins,name){
+  var m=(ins||[]).find(function(i){return i.name===name});
+  if(!m||m._unavailable)return null;
+  var v=m.values||[];
+  if(v.length===0)return null;
+  return{
+    labels:v.map(function(x){return new Date(x.end_time).toLocaleDateString('de-DE',{day:'2-digit',month:'short'})}),
+    data:v.map(function(x){return x.value||0})
+  };
+}
+
+function makeChart(id,label,td,color,wholeNumbers){
+  var el=document.getElementById(id);if(!el)return;
+  if(!td){el.style.display='none';var p=document.createElement('div');p.className='na-msg';p.textContent='Not enough data yet — keep refreshing daily!';el.parentElement.appendChild(p);return;}
+  new Chart(el,{type:'line',data:{labels:td.labels,datasets:[{label:label,data:td.data,borderColor:color,backgroundColor:color+'22',fill:true,tension:.35,pointRadius:2,borderWidth:2}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{x:{grid:{color:'rgba(148,163,184,.06)'},ticks:{maxTicksLimit:10,font:{size:11,family:'JetBrains Mono'},color:'#64748b'}},y:{beginAtZero:false,grid:{color:'rgba(148,163,184,.06)'},ticks:{font:{size:11,family:'JetBrains Mono'},color:'#64748b',precision:wholeNumbers?0:undefined}}}}});
+}
+
+function makeBarChart(id,label,labels,data,color){
+  var el=document.getElementById(id);if(!el)return;
+  new Chart(el,{type:'bar',data:{labels:labels,datasets:[{label:label,data:data,backgroundColor:color+'44',borderColor:color,borderWidth:1,borderRadius:6}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{x:{grid:{color:'rgba(148,163,184,.06)'},ticks:{font:{size:10,family:'JetBrains Mono'},color:'#64748b'}},y:{beginAtZero:true,grid:{color:'rgba(148,163,184,.06)'},ticks:{font:{size:11,family:'JetBrains Mono'},color:'#64748b'}}}}});
+}
+
+var SVG_HEART='<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>';
+var SVG_COMMENT='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>';
+var SVG_EYE='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>';
+var SVG_SHARE='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>';
+var SVG_BOOKMARK='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>';
+var SVG_FIRE='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 12c2-2.96 0-7-1-8 0 3.038-1.773 4.741-3 6-1.226 1.26-2 3.24-2 5a6 6 0 1 0 12 0c0-1.532-1.056-3.94-2-5-1.786 3-2.791 3-4 2z"/></svg>';
+var SVG_TROPHY='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>';
+var SVG_CALENDAR='<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>';
+var SVG_TABLE='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3h18v18H3z"/><path d="M3 9h18"/><path d="M3 15h18"/><path d="M9 3v18"/></svg>';
+var SVG_IMG_PLACEHOLDER='<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>';
+var SVG_IMG_PLACEHOLDER_LG='<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>';
+var SVG_PEOPLE='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>';
+var SVG_CHART='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>';
+var SVG_CLOCK='<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>';
+var SVG_TT='<svg width="36" height="36" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M16.6 5.82s.51.5 0 0A4.28 4.28 0 0 1 15.54 3h-3.09v12.4a2.59 2.59 0 0 1-2.59 2.5c-1.42 0-2.6-1.16-2.6-2.6 0-1.72 1.66-3.01 3.37-2.48V9.66c-3.45-.46-6.47 2.22-6.47 5.64 0 3.33 2.76 5.7 5.69 5.7 3.14 0 5.69-2.55 5.69-5.7V9.01a7.35 7.35 0 0 0 4.3 1.38V7.3s-1.88.09-3.34-1.48z"/></svg>';
+var SVG_GRID='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>';
+
+function onImgErr(el,type){
+  if(type==='avatar'){el.outerHTML='<div class="avatar-placeholder">'+SVG_TT+'</div>';}
+  else if(type==='top'){el.outerHTML='<div class="top-img-placeholder">'+SVG_IMG_PLACEHOLDER_LG+'</div>';}
+  else if(type==='cell'){el.outerHTML='<div class="ph">'+SVG_IMG_PLACEHOLDER+'</div>';}
+  else{el.parentElement.innerHTML='<div class="no-img">'+SVG_IMG_PLACEHOLDER+'</div>';}
+}
+
+// ── Sortable performance table state ──
+var _posts=[];
+var _sortKey='views';
+var _sortDir=-1; // -1 desc, 1 asc
+
+function postEngRate(p){var ins=p.insights||{};return ins.views>0?(ins.engagement/ins.views*100):0}
+
+function sortBy(key){
+  if(_sortKey===key){_sortDir=-_sortDir;}else{_sortKey=key;_sortDir=(key==='date'||key==='caption')?1:-1;}
+  renderTable();
+}
+
+function renderTable(){
+  var tbody=document.getElementById('perfBody');
+  if(!tbody)return;
+  var rows=_posts.slice().sort(function(a,b){
+    var av,bv;
+    var ai=a.insights||{},bi=b.insights||{};
+    switch(_sortKey){
+      case 'date':av=new Date(a.timestamp||0).getTime();bv=new Date(b.timestamp||0).getTime();break;
+      case 'caption':av=(a.caption||'').toLowerCase();bv=(b.caption||'').toLowerCase();return av<bv?_sortDir:av>bv?-_sortDir:0;
+      case 'views':av=ai.views||0;bv=bi.views||0;break;
+      case 'likes':av=ai.likes||0;bv=bi.likes||0;break;
+      case 'comments':av=ai.comments||0;bv=bi.comments||0;break;
+      case 'shares':av=ai.shares||0;bv=bi.shares||0;break;
+      case 'saves':av=ai.saves||0;bv=bi.saves||0;break;
+      case 'er':av=postEngRate(a);bv=postEngRate(b);break;
+      default:av=0;bv=0;
+    }
+    return av<bv?_sortDir:av>bv?-_sortDir:0;
+  });
+
+  var html='';
+  rows.forEach(function(p){
+    var ins=p.insights||{};
+    var src=postImg(p);
+    var dateStr=p.timestamp?new Date(p.timestamp).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'2-digit'}):'—';
+    html+='<tr>';
+    html+='<td><a class="post-cell" href="'+(p.permalink||'#')+'" target="_blank" rel="noopener">';
+    if(src){html+='<img src="'+esc(src)+'" alt="" loading="lazy" onerror="onImgErr(this,\'cell\')">';}
+    else{html+='<div class="ph">'+SVG_IMG_PLACEHOLDER+'</div>';}
+    html+='<span class="post-cap">'+esc(p.caption||'(no caption)')+(p.is_pinned?'<span class="pin">📌 PINNED</span>':'')+'</span></a></td>';
+    html+='<td class="num">'+fmt(ins.views)+'<div style="font-size:.62rem;color:var(--text-3)">'+dateStr+'</div></td>';
+    html+='<td>'+fmt(ins.likes)+'</td>';
+    html+='<td>'+fmt(ins.comments)+'</td>';
+    html+='<td>'+fmt(ins.shares)+'</td>';
+    html+='<td>'+fmt(ins.saves)+'</td>';
+    html+='<td class="er">'+pct(postEngRate(p))+'</td>';
+    html+='</tr>';
+  });
+  tbody.innerHTML=html;
+
+  // header arrows
+  document.querySelectorAll('th[data-key]').forEach(function(th){
+    var k=th.getAttribute('data-key');
+    var base=th.getAttribute('data-label');
+    th.innerHTML=base+(k===_sortKey?'<span class="arrow">'+(_sortDir<0?'▼':'▲')+'</span>':'');
+  });
+}
+
+function render(d){
+  var a=d.account,insights=d.insights,posts=d.posts,cm=d.calculated_metrics,lastFetch=d.lastFetch,source=d.source;
+  _posts=posts||[];
+
+  document.getElementById('lastFetch').textContent='Updated: '+new Date(lastFetch).toLocaleString('de-DE');
+  var badgeEl=document.getElementById('sourceBadge');
+  badgeEl.textContent=source==='apify'?'↗ Apify':'• Live';
+
+  var followers=a?a.followers_count||0:0;
+  var totalLikes=a?a.total_likes||0:0;
+  var mediaCount=a?a.media_count||0:0;
+  var engRate=cm?cm.engagement_rate||0:0;
+  var avgViews=cm?cm.avg_views||0:0;
+  var avgLikes=cm?cm.avg_likes||0:0;
+  var avgComments=cm?cm.avg_comments||0:0;
+  var avgShares=cm?cm.avg_shares||0:0;
+  var avgSaves=cm?cm.avg_saves||0:0;
+
+  var fcData=timeData(insights,'follower_count');
+  var followerChange='';
+  if(fcData&&fcData.data.length>=2){
+    var diff=fcData.data[fcData.data.length-1]-fcData.data[0];
+    var cls=diff>0?'up':diff<0?'down':'flat';
+    var sign=diff>0?'+':'';
+    followerChange='<div class="change '+cls+'">'+sign+diff+' since tracking started</div>';
+  }
+
+  var sortedByViews=_posts.slice().sort(function(x,y){return((y.insights&&y.insights.views)||0)-((x.insights&&x.insights.views)||0)});
+  var bestPost=sortedByViews[0]||null;
+
+  var chronoPosts=_posts.slice().sort(function(x,y){return new Date(x.timestamp||0)-new Date(y.timestamp||0)});
+  var postLabels=chronoPosts.map(function(p){return p.timestamp?new Date(p.timestamp).toLocaleDateString('de-DE',{day:'2-digit',month:'short'}):'?'});
+  var postViews=chronoPosts.map(function(p){return p.insights?p.insights.views||0:0});
+  var postLikes=chronoPosts.map(function(p){return p.insights?p.insights.likes||0:0});
+
+  // Posts grid (newest first)
+  var postsHTML='';
+  _posts.slice().sort(function(x,y){return new Date(y.timestamp||0)-new Date(x.timestamp||0)}).forEach(function(p){
+    var ins=p.insights||{};
+    var eng=ins.engagement||0;
+    var isBest=bestPost&&p.id===bestPost.id;
+    var src=postImg(p);
+
+    postsHTML+='<a class="post-card" href="'+(p.permalink||'#')+'" target="_blank" rel="noopener">';
+    postsHTML+='<div class="post-img-wrap">';
+    if(src){postsHTML+='<img src="'+esc(src)+'" alt="" loading="lazy" onerror="onImgErr(this,\'post\')">';}
+    else{postsHTML+='<div class="no-img">'+SVG_IMG_PLACEHOLDER+'</div>';}
+    if(ins.views)postsHTML+='<span class="views-overlay">'+SVG_EYE+' '+fmt(ins.views)+'</span>';
+    postsHTML+='</div>';
+    postsHTML+='<div class="post-body">';
+    postsHTML+='<div class="caption">'+esc(p.caption||'(no caption)')+'</div>';
+    postsHTML+='<div class="post-meta">';
+    postsHTML+='<span>'+SVG_HEART+' '+fmt(ins.likes)+'</span>';
+    postsHTML+='<span>'+SVG_COMMENT+' '+fmt(ins.comments)+'</span>';
+    postsHTML+='<span>'+SVG_SHARE+' '+fmt(ins.shares)+'</span>';
+    postsHTML+='<span'+(isBest?' class="highlight"':'')+'>'+SVG_FIRE+' '+fmt(eng)+'</span>';
+    postsHTML+='</div>';
+    postsHTML+='<div class="post-date"><span class="date-text">'+SVG_CLOCK+' '+relDate(p.timestamp)+(p.timestamp?', '+new Date(p.timestamp).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'}):'')+'</span><span class="media-badge">'+(p.media_type||'')+'</span></div>';
+    postsHTML+='</div></a>';
+  });
+
+  // Best post
+  var bestPostHTML='';
+  if(bestPost){
+    var bi=bestPost.insights||{};
+    var bsrc=postImg(bestPost);
+    bestPostHTML='<div class="top-post-section"><h3>'+SVG_TROPHY+' Best Performing Post</h3>';
+    bestPostHTML+='<a href="'+(bestPost.permalink||'#')+'" target="_blank" class="top-post-card">';
+    if(bsrc){bestPostHTML+='<img class="top-img" src="'+esc(bsrc)+'" alt="" onerror="onImgErr(this,\'top\')">';}
+    else{bestPostHTML+='<div class="top-img-placeholder">'+SVG_IMG_PLACEHOLDER_LG+'</div>';}
+    bestPostHTML+='<div class="top-info"><h4>Most viewed of the last '+_posts.length+' posts</h4>';
+    bestPostHTML+='<div class="top-caption">'+esc(bestPost.caption||'')+'</div>';
+    bestPostHTML+='<div class="top-stats">';
+    bestPostHTML+='<span>'+SVG_EYE+' '+fmt(bi.views)+' Views</span>';
+    bestPostHTML+='<span>'+SVG_HEART+' '+fmt(bi.likes)+' Likes</span>';
+    bestPostHTML+='<span>'+SVG_COMMENT+' '+fmt(bi.comments)+' Comments</span>';
+    bestPostHTML+='<span>'+SVG_SHARE+' '+fmt(bi.shares)+' Shares</span>';
+    bestPostHTML+='<span>'+SVG_BOOKMARK+' '+fmt(bi.saves)+' Saves</span>';
+    bestPostHTML+='</div></div></a></div>';
+  }
+
+  var profSrc=a?a.profile_picture_url||'':'';
+
+  var html='';
+  html+='<div class="profile-card">';
+  if(profSrc){html+='<img src="'+esc(profSrc)+'" alt="" onerror="onImgErr(this,\'avatar\')">';}
+  else{html+='<div class="avatar-placeholder">'+SVG_TT+'</div>';}
+  html+='<div class="info"><h2>@'+esc(a?a.username||'—':'—')+'</h2>';
+  html+='<p>'+esc(a?a.biography||'':'')+'</p>';
+  var link=a?(a.website||a.profile_url||''):'';
+  if(link)html+='<p><a href="'+esc(link)+'" target="_blank">'+esc(link)+'</a></p>';
+  html+='</div></div>';
+
+  html+='<div class="kpi-grid">';
+  html+='<div class="kpi-card" style="--accent:#FE2C55;--accent-end:#25F4EE"><div class="icon">'+SVG_PEOPLE+'</div><div class="label">Followers</div><div class="value">'+fmt(followers)+'</div><div class="sub">Total</div>'+followerChange+'</div>';
+  html+='<div class="kpi-card" style="--accent:#ec4899;--accent-end:#f472b6"><div class="icon">'+SVG_HEART+'</div><div class="label">Total Likes</div><div class="value">'+fmt(totalLikes)+'</div><div class="sub">All-time hearts</div></div>';
+  html+='<div class="kpi-card" style="--accent:#10b981;--accent-end:#34d399"><div class="icon">'+SVG_CHART+'</div><div class="label">Engagement Rate</div><div class="value">'+pct(engRate)+'</div><div class="sub">Interactions / views</div></div>';
+  html+='<div class="kpi-card" style="--accent:#06b6d4;--accent-end:#22d3ee"><div class="icon">'+SVG_EYE+'</div><div class="label">Avg Views</div><div class="value">'+fmt(Math.round(avgViews))+'</div><div class="sub">Per post</div></div>';
+  html+='<div class="kpi-card" style="--accent:#ef4444;--accent-end:#f87171"><div class="icon">'+SVG_HEART+'</div><div class="label">Avg Likes</div><div class="value">'+fmt(Math.round(avgLikes))+'</div><div class="sub">Per post</div></div>';
+  html+='<div class="kpi-card" style="--accent:#f59e0b;--accent-end:#fbbf24"><div class="icon">'+SVG_COMMENT+'</div><div class="label">Avg Comments</div><div class="value">'+fmt(Math.round(avgComments))+'</div><div class="sub">Per post</div></div>';
+  html+='<div class="kpi-card" style="--accent:#8b5cf6;--accent-end:#a78bfa"><div class="icon">'+SVG_SHARE+'</div><div class="label">Avg Shares</div><div class="value">'+fmt(Math.round(avgShares))+'</div><div class="sub">Per post</div></div>';
+  html+='<div class="kpi-card" style="--accent:#14b8a6;--accent-end:#2dd4bf"><div class="icon">'+SVG_BOOKMARK+'</div><div class="label">Avg Saves</div><div class="value">'+fmt(Math.round(avgSaves))+'</div><div class="sub">Per post</div></div>';
+  html+='<div class="kpi-card" style="--accent:#6366f1;--accent-end:#818cf8"><div class="icon">'+SVG_GRID+'</div><div class="label">Total Videos</div><div class="value">'+fmt(mediaCount)+'</div><div class="sub">Published</div></div>';
+  html+='</div>';
+
+  html+=bestPostHTML;
+
+  html+='<div class="charts-grid">';
+  html+='<div class="chart-card"><h3><span class="chart-icon">'+SVG_PEOPLE+'</span> Follower Count Over Time</h3><canvas id="cFC"></canvas></div>';
+  html+='<div class="chart-card"><h3><span class="chart-icon">'+SVG_CHART+'</span> Engagement Rate Over Time</h3><canvas id="cER"></canvas></div>';
+  html+='<div class="chart-card"><h3><span class="chart-icon">'+SVG_EYE+'</span> Views per Post</h3><canvas id="cViews"></canvas></div>';
+  html+='<div class="chart-card"><h3><span class="chart-icon">'+SVG_HEART+'</span> Likes per Post</h3><canvas id="cLikes"></canvas></div>';
+  html+='</div>';
+
+  // Sortable performance table
+  html+='<div class="table-section"><h3>'+SVG_TABLE+' All Posts — Performance Overview</h3>';
+  html+='<div class="table-wrap"><table class="perf"><thead><tr>';
+  html+='<th data-key="caption" data-label="Post" onclick="sortBy(\'caption\')"></th>';
+  html+='<th data-key="views" data-label="Views" onclick="sortBy(\'views\')"></th>';
+  html+='<th data-key="likes" data-label="Likes" onclick="sortBy(\'likes\')"></th>';
+  html+='<th data-key="comments" data-label="Comments" onclick="sortBy(\'comments\')"></th>';
+  html+='<th data-key="shares" data-label="Shares" onclick="sortBy(\'shares\')"></th>';
+  html+='<th data-key="saves" data-label="Saves" onclick="sortBy(\'saves\')"></th>';
+  html+='<th data-key="er" data-label="Eng %" onclick="sortBy(\'er\')"></th>';
+  html+='</tr></thead><tbody id="perfBody"></tbody></table></div></div>';
+
+  html+='<div class="posts-section"><h3>'+SVG_CALENDAR+' Recent Posts</h3><div class="posts-grid">'+postsHTML+'</div></div>';
+
+  document.getElementById('app').innerHTML=html;
+
+  renderTable();
+  makeChart('cFC','Followers',fcData,'#FE2C55',true);
+  makeChart('cER','Engagement Rate',timeData(insights,'engagement_rate'),'#10b981',false);
+  makeBarChart('cViews','Views',postLabels,postViews,'#25F4EE');
+  makeBarChart('cLikes','Likes',postLabels,postLikes,'#ef4444');
+}
+
+async function loadData(){
+  try{var r=await fetch('/api/tiktok/kpis');if(!r.ok)throw new Error('HTTP '+r.status);var d=await r.json();if(!d.lastFetch){document.getElementById('app').innerHTML='<div class="err">No TikTok data cached yet — it will appear after the next scheduled refresh.</div>';return;}render(d);}
+  catch(e){document.getElementById('app').innerHTML='<div class="err">'+e.message+'</div>'}
+}
+
+loadData();
+</script>
+</body>
+</html>
