@@ -130,6 +130,7 @@ function render(d){
   html+='<div class="kpi-card" style="--accent:var(--purple)"><div class="label">Travel Deposits</div><div class="value">'+pct(curRev.travel_deposits?.percentage)+'</div><div class="sub">'+eur(curRev.travel_deposits?.total)+'</div></div>';
   html+='<div class="kpi-card" style="--accent:var(--amber)"><div class="label">Merch</div><div class="value">'+pct(curRev.merch?.percentage)+'</div><div class="sub">'+eur(curRev.merch?.total)+'</div></div>';
   html+='<div class="kpi-card" style="--accent:var(--text-3)"><div class="label">Other</div><div class="value">'+pct(curRev.other?.percentage)+'</div><div class="sub">'+eur(curRev.other?.total)+'</div></div>';
+  if(curRev.reconciliation?.total)html+='<div class="kpi-card" style="--accent:var(--text-3)"><div class="label">Reversals / Refunds</div><div class="value">'+eur(curRev.reconciliation?.total)+'</div><div class="sub">excluded from totals</div></div>';
   html+='</div>';
 
   // ── Current Year Expense Split ──
@@ -140,7 +141,9 @@ function render(d){
   html+='<div class="kpi-card" style="--accent:var(--purple)"><div class="label">Events</div><div class="value">'+pct(curExp.events?.percentage)+'</div><div class="sub">'+eur(curExp.events?.total)+'</div></div>';
   html+='<div class="kpi-card" style="--accent:var(--red)"><div class="label">Subscriptions</div><div class="value">'+pct(curExp.subscriptions?.percentage)+'</div><div class="sub">'+eur(curExp.subscriptions?.total)+'</div></div>';
   html+='<div class="kpi-card" style="--accent:var(--emerald)"><div class="label">Merch</div><div class="value">'+pct(curExp.merch?.percentage)+'</div><div class="sub">'+eur(curExp.merch?.total)+'</div></div>';
+  html+='<div class="kpi-card" style="--accent:var(--blue)"><div class="label">Supplies / Office</div><div class="value">'+pct(curExp.supplies?.percentage)+'</div><div class="sub">'+eur(curExp.supplies?.total)+'</div></div>';
   html+='<div class="kpi-card" style="--accent:var(--text-3)"><div class="label">Other</div><div class="value">'+pct(curExp.other?.percentage)+'</div><div class="sub">'+eur(curExp.other?.total)+'</div></div>';
+  if(curExp.reconciliation?.total)html+='<div class="kpi-card" style="--accent:var(--text-3)"><div class="label">Reversals / Refunds</div><div class="value">'+eur(curExp.reconciliation?.total)+'</div><div class="sub">excluded from totals</div></div>';
   html+='</div>';
 
   // ── Charts: Current Year ──
@@ -198,9 +201,9 @@ function render(d){
   }
 
   // Current year expense breakdown
-  var expLabels=['Stammtische / Food','Travel','Events','Subscriptions','Merch','Other'];
-  var expColors=['#f59e0b','#3b82f6','#a855f7','#ef4444','#10b981','#64748b'];
-  var curExpData=[curExp.stammtisch?.total||0,curExp.travel?.total||0,curExp.events?.total||0,curExp.subscriptions?.total||0,curExp.merch?.total||0,curExp.other?.total||0];
+  var expLabels=['Stammtische / Food','Travel','Events','Subscriptions','Merch','Supplies / Office','Other'];
+  var expColors=['#f59e0b','#3b82f6','#a855f7','#ef4444','#10b981','#06b6d4','#64748b'];
+  var curExpData=[curExp.stammtisch?.total||0,curExp.travel?.total||0,curExp.events?.total||0,curExp.subscriptions?.total||0,curExp.merch?.total||0,curExp.supplies?.total||0,curExp.other?.total||0];
   var el3=document.getElementById('cExpCurrent');
   if(el3){
     new Chart(el3,{type:'bar',data:{labels:expLabels,datasets:[{data:curExpData,backgroundColor:expColors.map(function(c){return c+'88'}),borderColor:expColors,borderWidth:1,borderRadius:6}]},options:{responsive:true,indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{beginAtZero:true,grid:{color:'rgba(148,163,184,.06)'},ticks:{color:'#64748b',callback:function(v){return v>=1000?(v/1000).toFixed(0)+'k':v}}},y:{grid:{display:false},ticks:{color:'#94a3b8',font:{size:12}}}}}});

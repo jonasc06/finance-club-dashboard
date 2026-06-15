@@ -146,13 +146,17 @@ async function fetchData() {
   };
 
   // Fetch all data sources in parallel
-  const [orgRes, members, invoices, inventoryItems, memberGroups, bookings] = await Promise.all([
+  const [orgRes, members, invoices, inventoryItems, memberGroups, bookings, billingAccounts] = await Promise.all([
     api('organization').catch(onFail('Organization', { data: {} })),
     apiAllPages('member', { query: '{id,joinDate,resignationDate,_isApplication}' }).catch(onFail('Members', [])),
-    apiAllPages('invoice', { query: '{id,charges,date,dateSent,relatedBookings,isDraft,canceledInvoice,isRequest,totalPrice}' }).catch(onFail('Invoices', [])),
+    apiAllPages('invoice', { query: '{id,description,charges,date,dateSent,relatedBookings,isDraft,canceledInvoice,isRequest,totalPrice}' }).catch(onFail('Invoices', [])),
     apiAllPages('inventory-object').catch(onFail('Inventory', [])),
     apiAllPages('member-group', { query: '{id,name,short,linkedItems}' }).catch(onFail('Member groups', [])),
-    apiAllPages('booking', { query: '{id,amount,date,description}' }).catch(onFail('Bookings', [])),
+    // Pull EasyVerein's native accounting fields so we can classify from them
+    // (billingAccount = Sachkonto, bookingProject, receiver) instead of guessing
+    // from the free-text description alone.
+    apiAllPages('booking', { query: '{id,amount,date,description,receiver,bookingProject,sphere,billingAccount,relatedInvoice}' }).catch(onFail('Bookings', [])),
+    apiAllPages('billing-account', { query: '{id,name,number}' }).catch(onFail('Billing accounts', [])),
   ]);
 
   // Abort on auth failure — do NOT compute zeros, pollute history, or overwrite the cache.
@@ -239,6 +243,50 @@ async function fetchData() {
     monthlyCooperation.push({ month: monthKey, label: monthLabel, value: Math.round(monthCoop * 100) / 100 });
   }
 
+  // ── Enrich bookings with native accounting fields (Tier 0/1/4) ──
+  // billing-account id → name (the Sachkonto / ledger account)
+  const billingAccountMap = {};
+  (billingAccounts || []).forEach(a => { if (a && a.id != null) billingAccountMap[a.id] = a.name || ''; });
+  const extractId = (ref) => {
+    if (ref == null) return null;
+    if (typeof ref === 'object') return ref.id != null ? String(ref.id) : null;
+    const m = String(ref).match(/(\d+)\/?$/);
+    return m ? m[1] : String(ref);
+  };
+  const resolveAccountName = (ref) => {
+    if (!ref) return '';
+    if (typeof ref === 'object' && ref.name) return ref.name;
+    const id = extractId(ref);
+    return (id != null && billingAccountMap[id]) ? billingAccountMap[id] : '';
+  };
+
+  // Tier 4: derive a category from each invoice, then attach to its related bookings.
+  const invoiceCatByBookingId = {};
+  (invoices || []).forEach(inv => {
+    const cat = deriveInvoiceCategory(inv);
+    if (!cat) return;
+    (inv.relatedBookings || []).forEach(rb => {
+      const id = extractId(rb);
+      if (id != null) invoiceCatByBookingId[id] = cat;
+    });
+  });
+
+  // Flatten each booking to exactly the fields classification needs, so the
+  // route can re-run computeFinanceKpis on _raw_bookings without re-fetching.
+  const enrichedBookings = (bookings || []).map(b => ({
+    amount: b.amount,
+    date: b.date,
+    description: b.description || '',
+    receiver: b.receiver || '',
+    bookingProject: typeof b.bookingProject === 'string' ? b.bookingProject : '',
+    sphere: b.sphere || null,
+    account: resolveAccountName(b.billingAccount),
+    invoiceCat: invoiceCatByBookingId[extractId(b.id)] || null,
+  }));
+
+  const accountCoverage = enrichedBookings.filter(b => b.account).length;
+  console.log(`[EasyVerein] bookings=${enrichedBookings.length}, billing-accounts=${(billingAccounts || []).length}, bookings w/ account name=${accountCoverage} (${enrichedBookings.length ? Math.round(accountCoverage / enrichedBookings.length * 100) : 0}%)`);
+
   // ── Bookings analysis ──
   const monthlyIncome = [];
   const monthlyExpenses = [];
@@ -246,7 +294,7 @@ async function fetchData() {
     const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
     const monthKey = d.toISOString().slice(0, 7);
     const monthLabel = d.toLocaleDateString('de-DE', { month: 'short', year: '2-digit' });
-    const monthBookings = bookings.filter(b => b.date && b.date.slice(0, 7) === monthKey);
+    const monthBookings = enrichedBookings.filter(b => b.date && b.date.slice(0, 7) === monthKey);
     const income = monthBookings.filter(b => parseFloat(b.amount) > 0).reduce((s, b) => s + parseFloat(b.amount), 0);
     const expenses = monthBookings.filter(b => parseFloat(b.amount) < 0).reduce((s, b) => s + Math.abs(parseFloat(b.amount)), 0);
     monthlyIncome.push({ month: monthKey, label: monthLabel, value: Math.round(income * 100) / 100 });
@@ -262,7 +310,7 @@ async function fetchData() {
   }));
 
   // ── Finance KPIs (default to latest year with data) ──
-  const financeKpis = computeFinanceKpis(bookings, members, null);
+  const financeKpis = computeFinanceKpis(enrichedBookings, members, null);
 
   // ── History snapshots ──
   const history = await appendSnapshot(activeMembers.length, totalRevenue, openInvoicesList.length);
@@ -320,7 +368,7 @@ async function fetchData() {
       open_invoices: openInvoicesList.length,
     },
     finance_kpis: financeKpis,
-    _raw_bookings: bookings.map(b => ({ amount: b.amount, date: b.date, description: b.description })),
+    _raw_bookings: enrichedBookings,
     _raw_members: members.map(m => ({ joinDate: m.joinDate, resignationDate: m.resignationDate, _isApplication: m._isApplication })),
     insights,
     lastFetch: new Date().toISOString(),
@@ -329,47 +377,111 @@ async function fetchData() {
 }
 
 // ── Booking classification ──
+//
+// Priority (most authoritative first):
+//   1. Reconciliation guard  — reversals/refunds/failed debits are NOT operational
+//   2. billingAccount (Sachkonto) — EasyVerein's own ledger account
+//   3. bookingProject — project tag (e.g. "Münchenfahrt 2025")
+//   4. relatedInvoice-derived category (invoices carry the real purpose)
+//   5. keyword match on receiver + description (receiver holds the merchant the
+//      bank card-slip description usually omits)
+//   6. amount heuristics (member-fee multiples, SumUp bulk)
+// Anything left over → 'other'.
 
-function classifyIncome(description, amount) {
-  const d = (description || '').toLowerCase();
-  if (d.includes('mitgliedsbeitrag') || (amount > 0 && amount <= 36 && Math.round(amount * 100) % 300 === 0)) {
-    return 'member_fees';
-  }
-  // SumUp bulk payments (DATUM...ANZAHL) — per-person ≤36 = member fees (SumUp fee causes slight deviation from exact €3 multiples)
-  const sumupMatch = (description || '').match(/ANZAHL\s*(\d+)/i);
-  if (sumupMatch) {
-    const count = parseInt(sumupMatch[1]);
-    if (count > 0) {
-      const perPerson = amount / count;
-      if (perPerson <= 36) {
-        return 'member_fees';
-      }
-    }
-    return 'other';
-  }
-  if (amount >= 200 && /rech|refnr|sponsoring|\/inv\/|re\.nr|re-nr|\+re:|rnr|\d{4}-\d{2}\/|pro\s*forma/i.test(description || '')) {
-    return 'sponsoring';
-  }
-  if (/polo|hoodie|t-shirt|quarter\s*zip|pullover|jacke|pulli|kapuzenjacke|merch/i.test(description || '')) {
-    return 'merch';
-  }
-  if (amount === 69.95 || (amount > 60 && amount < 75 && /^[A-ZÄÖÜ][a-zäöüß]+ [A-ZÄÖÜ]/i.test(description || ''))) {
-    return 'merch';
-  }
-  if (/münchen|muenchen|munich|wien|frankfurt|ffm|kaution|pfand|börsenfahrt|borsenfahrt|muenchenfahrt|münchenfahrt|bvh.*konferenz|konferenz.*bvh/i.test(description || '')) {
-    return 'travel_deposits';
-  }
-  return 'other';
+// Tier 2 — transactions that are not real income/expense (reversed/refunded/failed).
+// Guard: "Auslage(nerstattung)" is a genuine member reimbursement, not a reversal.
+function isReconciliation(b) {
+  const t = ((b.receiver || '') + ' ' + (b.description || '')).toLowerCase();
+  if (/auslage/.test(t)) return false;
+  return /rücklastschrift|ruecklastschrift|lastschriftr|lastschrift zurück|storno|retoure|chargeback|rückbuchung|rueckbuchung|zurückgebucht|zurueckgebucht|\breject\b|konto.*(aufgel|erlosch)|erloschen|ungültige? iban|ungueltige? iban|fehlerhaft|rückerstattung|rueckerstattung|rücküberweisung|rueckueberweisung|\berstattung\b/.test(t);
 }
 
-function classifyExpense(description) {
-  const d = (description || '').toLowerCase();
-  if (d.includes('stammtisch') || /flaschenpost|pizzeria|lieferando|dominos/i.test(description || '')) return 'stammtisch';
-  if (/fahrt|reise|zugfahrt|anreise|fahrtkost|münchen|muenchen|munich|wien|frankfurt|ffm|hotel|booking\.com|airbnb|unterkunft/i.test(description || '')) return 'travel';
-  if (/event|sommerfest|konferenz|strategieevent|jubiläum|uni\s*camp|paintball|padel|bowling|klettern|laser/i.test(description || '')) return 'events';
-  if (/alleaktien|easyverein|canva|zoom|notion|stripe|spotify|bvh|openai|claude|anthropic|ionos/i.test(description || '')) return 'subscriptions';
-  if (/polo|hoodie|t-shirt|quarter\s*zip|pullover|jacke|pulli|merch|sticker|stick(?:er)?.*datum|banner/i.test(description || '')) return 'merch';
-  return 'other';
+// Tier 1 — map a billing-account (Sachkonto) name to our category, per side.
+const ACCOUNT_RULES = [
+  { re: /mitglied|beitrag/i,                                              income: 'member_fees',     expense: null },
+  { re: /sponsor|kooperation|partner|werbeein|spende|förder|foerder|zuschuss/i, income: 'sponsoring', expense: null },
+  { re: /kaution|pfand/i,                                                 income: 'travel_deposits', expense: 'travel' },
+  { re: /reise|fahrt|übernacht|uebernacht|hotel|öpnv|oepnv|\bbahn\b|flug/i, income: 'travel_deposits', expense: 'travel' },
+  { re: /veranstalt|event|fest|feier|seminar|workshop|tagung|exkursion/i, income: 'other',           expense: 'events' },
+  { re: /bewirt|verpfleg|lebensmittel|getränk|getraenk|gastro|essen|stammtisch|restaurant/i, income: 'other', expense: 'stammtisch' },
+  { re: /software|edv|lizenz|\babo\b|saas|hosting|it-?kost|cloud|internet|telefon|domain/i, income: 'other', expense: 'subscriptions' },
+  { re: /merch|kleidung|textil|beklei|werbemittel|werbeartikel/i,         income: 'merch',           expense: 'merch' },
+  { re: /büro|buero|material|porto|versand|geschäftsbedarf|geschaeftsbedarf|bürobedarf|buerobedarf/i, income: 'other', expense: 'supplies' },
+];
+function accountToCategory(name, type) {
+  if (!name) return null;
+  for (const r of ACCOUNT_RULES) {
+    if (r.re.test(name)) { const c = type === 'income' ? r.income : r.expense; if (c) return c; }
+  }
+  return null;
+}
+
+// Tier 1 — map a free-text project tag to a category.
+function projectToCategory(project, type) {
+  if (!project) return null;
+  const p = project.toLowerCase();
+  if (/fahrt|reise|trip|exkursion|konferenz|conference|münchen|muenchen|wien|frankfurt|berlin|hamburg|köln|koeln/.test(p)) {
+    return type === 'income' ? 'travel_deposits' : 'travel';
+  }
+  if (/fest|event|feier|camp|jubiläum|jubilaeum|weihnacht|sommer|party|grill/.test(p)) {
+    return type === 'income' ? null : 'events';
+  }
+  if (/merch|kleidung|hoodie|polo|shirt/.test(p)) return 'merch';
+  return null;
+}
+
+// Tier 4 — derive a category from an invoice's own text (invoices are mostly income).
+function deriveInvoiceCategory(inv) {
+  const t = (inv && inv.description ? inv.description : '').toLowerCase();
+  if (!t) return null;
+  if (/mitglied|beitrag/.test(t)) return 'member_fees';
+  if (/sponsor|kooperation|partner|werbung|anzeige/.test(t)) return 'sponsoring';
+  if (/polo|hoodie|shirt|merch|pullover|jacke/.test(t)) return 'merch';
+  if (/fahrt|reise|kaution|münchen|muenchen|wien|frankfurt/.test(t)) return 'travel_deposits';
+  return null;
+}
+
+// Tier 3 — keyword match (expanded) on the combined receiver + description text.
+function keywordIncome(text, amount) {
+  if (/mitgliedsbeitrag/i.test(text)) return 'member_fees';
+  if (amount >= 200 && /rech|refnr|sponsoring|\/inv\/|re\.nr|re-nr|\+re:|rnr|\d{4}-\d{2}\/|pro\s*forma/i.test(text)) return 'sponsoring';
+  if (/polo|hoodie|t-shirt|quarter\s*zip|pullover|jacke|pulli|kapuzenjacke|merch|spreadshirt/i.test(text)) return 'merch';
+  if (/münchen|muenchen|munich|wien|frankfurt|ffm|kaution|pfand|börsenfahrt|borsenfahrt|muenchenfahrt|münchenfahrt|öpnv|oepnv|ticket|bvh.*konferenz|konferenz.*bvh/i.test(text)) return 'travel_deposits';
+  return null;
+}
+function keywordExpense(text) {
+  if (/stammtisch|flaschenpost|pizzeria|lieferando|dominos|\baldi\b|\brewe\b|\blidl\b|edeka|netto|kaufland|penny|getränke|getraenke|bäckerei|baeckerei|restaurant|mensa|metro|gastro/i.test(text)) return 'stammtisch';
+  if (/fahrt|reise|zugfahrt|anreise|fahrtkost|münchen|muenchen|munich|wien|frankfurt|ffm|hotel|booking\.com|airbnb|unterkunft|öpnv|oepnv|ticket|kaution|pfand|deutsche bahn|\bdb\b|db vertrieb|flixbus|\bflix\b|\bmvg\b|\blvb\b|uber|bolt|nextbike/i.test(text)) return 'travel';
+  if (/event|sommerfest|konferenz|strategieevent|jubiläum|jubilaeum|uni\s*camp|paintball|padel|bowling|klettern|laser|escape|grillen|weihnachtsfeier/i.test(text)) return 'events';
+  if (/alleaktien|easyverein|canva|zoom|notion|stripe|spotify|bvh|openai|claude|anthropic|ionos|github|adobe|figma|microsoft|google|telekom|vodafone|\baws\b|hetzner|mailchimp|slack/i.test(text)) return 'subscriptions';
+  if (/polo|hoodie|t-shirt|quarter\s*zip|pullover|jacke|pulli|merch|sticker|stick(?:er)?.*datum|banner|spreadshirt|stickerapp/i.test(text)) return 'merch';
+  if (/amazon|amzn|vistaprint|druck|flyer|\bprint\b|büro|buero|porto|stationery|office|saturn|mediamarkt|conrad/i.test(text)) return 'supplies';
+  return null;
+}
+
+function classifyBooking(b, type) {
+  const amount = parseFloat(b.amount);
+  const text = ((b.receiver || '') + ' ' + (b.description || '')).trim();
+
+  if (isReconciliation(b)) return 'reconciliation';
+
+  if (type === 'income') {
+    // Strong amount signal for member fees (kept early — robust to missing text).
+    if (amount > 0 && amount <= 36 && Math.round(amount * 100) % 300 === 0) return 'member_fees';
+    if (/mitgliedsbeitrag/i.test(text)) return 'member_fees';
+    const sumup = text.match(/ANZAHL\s*(\d+)/i);
+    if (sumup) { const c = parseInt(sumup[1]); if (c > 0 && amount / c <= 36) return 'member_fees'; }
+    return accountToCategory(b.account, 'income')
+        || projectToCategory(b.bookingProject, 'income')
+        || b.invoiceCat
+        || keywordIncome(text, amount)
+        || 'other';
+  }
+
+  return accountToCategory(b.account, 'expense')
+      || projectToCategory(b.bookingProject, 'expense')
+      || keywordExpense(text)
+      || 'other';
 }
 
 function computeSplit(bookings, type) {
@@ -377,11 +489,15 @@ function computeSplit(bookings, type) {
   const filtered = bookings.filter(b => isIncome ? parseFloat(b.amount) > 0 : parseFloat(b.amount) < 0);
   const buckets = isIncome
     ? { member_fees: 0, sponsoring: 0, travel_deposits: 0, merch: 0, other: 0 }
-    : { stammtisch: 0, travel: 0, events: 0, subscriptions: 0, merch: 0, other: 0 };
+    : { stammtisch: 0, travel: 0, events: 0, subscriptions: 0, merch: 0, supplies: 0, other: 0 };
 
+  // Reconciliation (reversals/refunds/failed) is tracked separately so it never
+  // inflates the operational totals or category percentages.
+  let reconciliation = 0;
   for (const b of filtered) {
     const amt = Math.abs(parseFloat(b.amount));
-    const cat = isIncome ? classifyIncome(b.description, parseFloat(b.amount)) : classifyExpense(b.description);
+    const cat = classifyBooking(b, type);
+    if (cat === 'reconciliation') { reconciliation += amt; continue; }
     buckets[cat] = (buckets[cat] || 0) + amt;
   }
 
@@ -393,7 +509,11 @@ function computeSplit(bookings, type) {
       percentage: total > 0 ? Math.round((val / total) * 10000) / 100 : 0,
     };
   }
-  return { split, total: Math.round(total * 100) / 100 };
+  split.reconciliation = {
+    total: Math.round(reconciliation * 100) / 100,
+    percentage: total > 0 ? Math.round((reconciliation / total) * 10000) / 100 : 0,
+  };
+  return { split, total: Math.round(total * 100) / 100, reconciliation: Math.round(reconciliation * 100) / 100 };
 }
 
 function computeFinanceKpis(bookings, members, selectedYear) {
